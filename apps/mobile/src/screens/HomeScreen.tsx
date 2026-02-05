@@ -40,7 +40,7 @@ export default function HomeScreen() {
 
     return (
       <TouchableOpacity
-        style={styles.pageCard}
+        style={styles.pageItem}
         onPress={() => handlePagePress(page)}
         activeOpacity={0.7}
       >
@@ -48,7 +48,7 @@ export default function HomeScreen() {
           <View style={styles.pageTitleRow}>
             {page.starred && (
               <Star
-                size={16}
+                size={14}
                 color={colors.primary}
                 fill={colors.primary}
                 style={styles.starIcon}
@@ -60,7 +60,7 @@ export default function HomeScreen() {
             {page.sections.length} sections · {noteCount} notes
           </Text>
         </View>
-        <ChevronRight size={20} color={colors.textMuted} />
+        <ChevronRight size={16} color={colors.textMuted} />
       </TouchableOpacity>
     );
   };
@@ -77,7 +77,7 @@ export default function HomeScreen() {
   if (loading && pages.length === 0) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="small" color={colors.textMuted} />
       </View>
     );
   }
@@ -85,7 +85,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Pages</Text>
+        <Text style={styles.headerTitle}>PAGES</Text>
       </View>
 
       {error && (
@@ -104,7 +104,7 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={loading}
             onRefresh={refreshData}
-            tintColor={colors.primary}
+            tintColor={colors.textMuted}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -116,48 +116,49 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
   },
   header: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   headerTitle: {
-    fontSize: theme.fontSize.xxl,
-    fontWeight: theme.fontWeight.bold,
-    color: colors.textPrimary,
+    fontSize: theme.fontSize.xs,
+    fontWeight: theme.fontWeight.medium,
+    color: colors.textMuted,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
   },
   errorBanner: {
-    backgroundColor: colors.error + '20',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.danger,
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
   },
   errorText: {
-    color: colors.error,
+    color: colors.danger,
     fontSize: theme.fontSize.sm,
   },
   list: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
   },
   emptyList: {
     flex: 1,
   },
-  pageCard: {
+  pageItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   pageInfo: {
     flex: 1,
@@ -171,7 +172,7 @@ const styles = StyleSheet.create({
   },
   pageName: {
     fontSize: theme.fontSize.lg,
-    fontWeight: theme.fontWeight.medium,
+    fontWeight: theme.fontWeight.normal,
     color: colors.textPrimary,
   },
   pageStats: {
@@ -186,8 +187,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xl,
   },
   emptyTitle: {
-    fontSize: theme.fontSize.xl,
-    fontWeight: theme.fontWeight.medium,
+    fontSize: theme.fontSize.lg,
+    fontWeight: theme.fontWeight.normal,
     color: colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },

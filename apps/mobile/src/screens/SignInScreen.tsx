@@ -22,7 +22,7 @@ export default function SignInScreen() {
       <View style={styles.content}>
         {/* Logo / Title */}
         <View style={styles.header}>
-          <Text style={styles.title}>Slate</Text>
+          <Text style={styles.title}>SLATE</Text>
           <Text style={styles.subtitle}>Your ideas, organized.</Text>
         </View>
 
@@ -38,19 +38,17 @@ export default function SignInScreen() {
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleSignIn}
           disabled={loading}
-          activeOpacity={0.8}
+          activeOpacity={0.7}
         >
           {loading ? (
-            <ActivityIndicator color={colors.background} />
+            <ActivityIndicator color={colors.textPrimary} size="small" />
           ) : (
-            <Text style={styles.buttonText}>Sign in with Google</Text>
+            <Text style={styles.buttonText}>SIGN IN WITH GOOGLE</Text>
           )}
         </TouchableOpacity>
 
         {/* Footer */}
-        <Text style={styles.footer}>
-          Built for operators.
-        </Text>
+        <Text style={styles.footer}>Built for operators.</Text>
       </View>
     </SafeAreaView>
   );
@@ -59,60 +57,66 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.lg,
   },
   header: {
     alignItems: 'center',
-    marginBottom: theme.spacing.xl * 2,
+    marginBottom: theme.spacing[12],
   },
   title: {
-    fontSize: theme.fontSize.title,
-    fontWeight: theme.fontWeight.bold,
-    color: colors.primary,
+    fontSize: theme.fontSize['3xl'],
+    fontWeight: theme.fontWeight.semibold,
+    color: colors.textPrimary,
+    letterSpacing: 4,
     marginBottom: theme.spacing.sm,
   },
   subtitle: {
-    fontSize: theme.fontSize.lg,
-    color: colors.textSecondary,
+    fontSize: theme.fontSize.md,
+    color: colors.textMuted,
+    letterSpacing: 0.5,
   },
   errorContainer: {
-    backgroundColor: colors.error + '20',
+    borderWidth: 1,
+    borderColor: colors.danger,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
     marginBottom: theme.spacing.lg,
   },
   errorText: {
-    color: colors.error,
+    color: colors.danger,
     fontSize: theme.fontSize.sm,
     textAlign: 'center',
   },
   button: {
-    backgroundColor: colors.primary,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.border,
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.xl,
-    borderRadius: theme.borderRadius.none,
-    minWidth: 200,
+    minWidth: 240,
     alignItems: 'center',
   },
   buttonDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   buttonText: {
-    color: colors.background,
-    fontSize: theme.fontSize.md,
-    fontWeight: theme.fontWeight.semibold,
+    color: colors.textPrimary,
+    fontSize: theme.fontSize.sm,
+    fontWeight: theme.fontWeight.medium,
+    letterSpacing: 1.5,
   },
   footer: {
     position: 'absolute',
     bottom: theme.spacing.xl,
     color: colors.textMuted,
-    fontSize: theme.fontSize.sm,
+    fontSize: theme.fontSize.xs,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 });

@@ -1,37 +1,31 @@
 /**
- * Slate color palette
- * Matches the web app: dark background, gold accents
+ * Slate Design Tokens - Colors
+ * Matches the web app exactly: dark background, gold accents
+ * @see /BRAND.md for full brand guidelines
  */
 export const colors = {
-  // Backgrounds
-  background: '#000000',
-  backgroundSecondary: '#0a0a0a',
-  backgroundTertiary: '#141414',
+  // Core backgrounds
+  bg: '#000000',
+  surface: '#0a0a0a',
+  border: '#1a1a1a',
 
-  // Gold accent (primary)
+  // Brand accent (gold) - use sparingly
   primary: '#d1b18f',
-  primaryMuted: '#a08060',
-  primaryBright: '#e8c9a0',
+  primaryDark: '#BC8E5E',
+  primaryLight: '#E5D4C1',
 
   // Text
   textPrimary: '#ffffff',
-  textSecondary: '#a0a0a0',
-  textMuted: '#606060',
+  textSecondary: '#cccccc',  // Brighter than muted, for agent responses
+  textMuted: '#888888',
 
-  // Borders
-  border: '#2a2a2a',
-  borderLight: '#3a3a3a',
+  // Semantic
+  success: '#4CAF50',
+  danger: '#ff6b6b',
+  error: '#ff4444',
 
-  // Status
-  success: '#4ade80',
-  error: '#ef4444',
-  warning: '#f59e0b',
-
-  // Tags
-  tagBackground: '#1a1a1a',
-  tagText: '#d1b18f',
-
-  // Completion
-  completed: '#4ade80',
-  incomplete: '#606060',
+  // Aliases for backward compatibility
+  background: '#000000',
+  backgroundSecondary: '#0a0a0a',
+  backgroundTertiary: '#141414',
 } as const;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LogOut } from 'lucide-react-native';
+import { LogOut, User } from 'lucide-react-native';
 import { useAuthStore } from '../stores/authStore';
 import { colors, theme } from '../styles';
 
@@ -11,16 +11,32 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Settings</Text>
+        <Text style={styles.headerTitle}>SETTINGS</Text>
       </View>
 
       <View style={styles.content}>
         {/* User info */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
+          <Text style={styles.sectionTitle}>ACCOUNT</Text>
           <View style={styles.card}>
-            <Text style={styles.label}>Email</Text>
-            <Text style={styles.value}>{user?.email}</Text>
+            <View style={styles.cardRow}>
+              <User size={16} color={colors.textMuted} />
+              <View style={styles.cardContent}>
+                <Text style={styles.label}>Email</Text>
+                <Text style={styles.value}>{user?.email || 'Not signed in'}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* App info */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>APP</Text>
+          <View style={styles.card}>
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>Version</Text>
+              <Text style={styles.infoValue}>1.0.0</Text>
+            </View>
           </View>
         </View>
 
@@ -30,9 +46,15 @@ export default function SettingsScreen() {
           onPress={logout}
           activeOpacity={0.7}
         >
-          <LogOut size={20} color={colors.error} />
-          <Text style={styles.signOutText}>Sign Out</Text>
+          <LogOut size={16} color={colors.danger} />
+          <Text style={styles.signOutText}>SIGN OUT</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Footer */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>SLATE</Text>
+        <Text style={styles.footerSubtext}>Built for operators.</Text>
       </View>
     </SafeAreaView>
   );
@@ -41,48 +63,65 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
   },
   header: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   headerTitle: {
-    fontSize: theme.fontSize.xxl,
-    fontWeight: theme.fontWeight.bold,
-    color: colors.textPrimary,
+    fontSize: theme.fontSize.xs,
+    fontWeight: theme.fontWeight.medium,
+    color: colors.textMuted,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
   },
   content: {
     flex: 1,
-    padding: theme.spacing.lg,
+    padding: theme.spacing.md,
   },
   section: {
-    marginBottom: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
   },
   sectionTitle: {
-    fontSize: theme.fontSize.sm,
+    fontSize: theme.fontSize.xs,
     fontWeight: theme.fontWeight.medium,
     color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
     marginBottom: theme.spacing.sm,
   },
   card: {
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     padding: theme.spacing.md,
   },
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardContent: {
+    marginLeft: theme.spacing.sm,
+  },
   label: {
     fontSize: theme.fontSize.sm,
     color: colors.textMuted,
-    marginBottom: theme.spacing.xs,
+    marginBottom: 2,
   },
   value: {
-    fontSize: theme.fontSize.md,
+    fontSize: theme.fontSize.base,
     color: colors.textPrimary,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  infoValue: {
+    fontSize: theme.fontSize.base,
+    color: colors.textMuted,
   },
   signOutButton: {
     flexDirection: 'row',
@@ -90,12 +129,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: theme.spacing.md,
     borderWidth: 1,
-    borderColor: colors.error,
+    borderColor: colors.border,
+    marginTop: theme.spacing.md,
   },
   signOutText: {
-    color: colors.error,
-    fontSize: theme.fontSize.md,
+    color: colors.danger,
+    fontSize: theme.fontSize.xs,
     fontWeight: theme.fontWeight.medium,
+    letterSpacing: 1.5,
     marginLeft: theme.spacing.sm,
+  },
+  footer: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  footerText: {
+    fontSize: theme.fontSize.sm,
+    fontWeight: theme.fontWeight.medium,
+    color: colors.textMuted,
+    letterSpacing: 2,
+    marginBottom: theme.spacing.xs,
+  },
+  footerSubtext: {
+    fontSize: theme.fontSize.xs,
+    color: colors.textMuted,
   },
 });

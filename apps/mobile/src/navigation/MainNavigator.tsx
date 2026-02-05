@@ -1,7 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home, MessageSquare, Settings } from 'lucide-react-native';
-import { colors } from '../styles';
+import { colors, theme } from '../styles';
 
 import HomeScreen from '../screens/HomeScreen';
 import ChatScreen from '../screens/ChatScreen';
@@ -17,7 +17,7 @@ export default function MainNavigator() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.background,
+          backgroundColor: colors.bg,
           borderTopColor: colors.border,
           borderTopWidth: 1,
           paddingBottom: 8,
@@ -27,8 +27,10 @@ export default function MainNavigator() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
+          fontSize: theme.fontSize.xxs,
+          fontWeight: theme.fontWeight.medium,
+          letterSpacing: 0.5,
+          textTransform: 'uppercase',
         },
       }}
     >
@@ -37,8 +39,8 @@ export default function MainNavigator() {
         component={HomeScreen}
         options={{
           tabBarLabel: 'Pages',
-          tabBarIcon: ({ color, size }) => (
-            <Home color={color} size={size} />
+          tabBarIcon: ({ color }) => (
+            <Home color={color} size={20} strokeWidth={1.5} />
           ),
         }}
       />
@@ -47,8 +49,8 @@ export default function MainNavigator() {
         component={ChatScreen}
         options={{
           tabBarLabel: 'Chat',
-          tabBarIcon: ({ color, size }) => (
-            <MessageSquare color={color} size={size} />
+          tabBarIcon: ({ color }) => (
+            <MessageSquare color={color} size={20} strokeWidth={1.5} />
           ),
         }}
       />
@@ -57,8 +59,8 @@ export default function MainNavigator() {
         component={SettingsScreen}
         options={{
           tabBarLabel: 'Settings',
-          tabBarIcon: ({ color, size }) => (
-            <Settings color={color} size={size} />
+          tabBarIcon: ({ color }) => (
+            <Settings color={color} size={20} strokeWidth={1.5} />
           ),
         }}
       />

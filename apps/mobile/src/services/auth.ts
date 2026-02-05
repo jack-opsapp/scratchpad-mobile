@@ -1,13 +1,16 @@
 import { authorize, AuthConfiguration } from 'react-native-app-auth';
 import { supabase } from './supabase';
 import type { User } from '@slate/shared';
+import { GOOGLE_CLIENT_ID_IOS } from '@env';
 
-// Google OAuth configuration
+// Google OAuth configuration - redirect URL must be reversed client ID for iOS
 const googleConfig: AuthConfiguration = {
   issuer: 'https://accounts.google.com',
-  clientId: process.env.GOOGLE_CLIENT_ID_IOS!, // Use iOS client ID
-  redirectUrl: 'com.slate.app:/oauth2redirect',
+  clientId: GOOGLE_CLIENT_ID_IOS || '', // Use iOS client ID
+  redirectUrl: 'com.googleusercontent.apps.1001959826984-omej1s1478oi2ub1j6hdqs130auibq5m:/oauthredirect',
   scopes: ['openid', 'profile', 'email'],
+  useNonce: false, // Disable nonce for Supabase compatibility
+  usePKCE: false,  // Disable PKCE for Supabase compatibility
 };
 
 export interface AuthState {
@@ -21,6 +24,14 @@ export interface AuthState {
  */
 export async function signInWithGoogle(): Promise<{ success: boolean; error?: string }> {
   try {
+    // Check if Google OAuth is configured
+    if (!GOOGLE_CLIENT_ID_IOS) {
+      return {
+        success: false,
+        error: 'Google Sign-In is not configured. Please add GOOGLE_CLIENT_ID_IOS to your .env file.'
+      };
+    }
+
     // Get OAuth tokens from Google
     const authResult = await authorize(googleConfig);
 

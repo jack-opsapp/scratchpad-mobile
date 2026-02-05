@@ -1,7 +1,8 @@
 import { ApiClient } from '@slate/api-client';
 import { supabase } from './supabase';
+import { API_URL } from '@env';
 
-const API_BASE_URL = process.env.API_URL || 'https://slate.opsapp.co';
+const API_BASE_URL = API_URL || 'https://slate.opsapp.co';
 
 export const apiClient = new ApiClient({
   baseUrl: API_BASE_URL,

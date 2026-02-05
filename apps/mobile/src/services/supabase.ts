@@ -1,9 +1,10 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 import * as Keychain from 'react-native-keychain';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@env';
 
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
+const supabaseUrl = SUPABASE_URL;
+const supabaseAnonKey = SUPABASE_ANON_KEY;
 
 // Secure storage adapter using react-native-keychain
 const KeychainAdapter = {

@@ -16,7 +16,14 @@
   },
   "devDependencies": {
     "@types/node": "^25.2.0",
+    "react-native-dotenv": "^3.4.11",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "react-native-reanimated": "3.6.2"
+  },
+  "dependencies": {
+    "hoist-non-react-statics": "^3.3.2"
   }
 }
