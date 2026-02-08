@@ -1,7 +1,7 @@
 import type { PlanGroup } from './requests';
 
 // Agent API Responses
-export type AgentResponseType = 'response' | 'clarification' | 'confirmation' | 'error';
+export type AgentResponseType = 'response' | 'clarification' | 'confirmation' | 'error' | 'plan_proposal' | 'step_revision';
 
 export interface ClarificationOption {
   label: string;
@@ -31,6 +31,12 @@ export interface AgentResponse {
   messageCount?: number;
   iterations?: number;
   details?: string; // For error type
+  plan?: {
+    summary?: string;
+    totalGroups: number;
+    groups: PlanGroup[];
+    totalActions: number;
+  };
 }
 
 // Parse API Responses
