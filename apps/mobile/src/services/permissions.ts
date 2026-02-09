@@ -8,6 +8,7 @@ export interface Collaborator {
   permissionId: string;
   userId: string;
   role: PermissionRole;
+  status: string;
   email: string;
 }
 
@@ -60,6 +61,7 @@ export async function getPageCollaborators(
     .select(`
       id,
       role,
+      status,
       user_id,
       users:user_id (
         id,
@@ -76,6 +78,7 @@ export async function getPageCollaborators(
     permissionId: p.id,
     userId: p.user_id,
     role: p.role as PermissionRole,
+    status: (p.status as string) || 'accepted',
     email: p.users?.email || '',
   }));
 }
