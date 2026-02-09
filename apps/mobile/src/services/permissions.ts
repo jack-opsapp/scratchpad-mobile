@@ -108,11 +108,12 @@ export async function inviteUserByEmail(
     .single();
 
   if (existingUser) {
-    const { error } = await supabase.from('page_permissions').insert({
-      page_id: pageId,
-      user_id: existingUser.id,
-      role,
-      status: 'pending',
+    // Use SECURITY DEFINER function to bypass RLS for cross-user insert
+    const { error } = await supabase.rpc('invite_user_to_page', {
+      p_page_id: pageId,
+      p_user_id: existingUser.id,
+      p_role: role,
+      p_status: 'pending',
     });
     if (error) throw error;
     return { status: 'added', userId: existingUser.id };
