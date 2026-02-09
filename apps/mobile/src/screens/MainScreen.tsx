@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, FlatList, StyleSheet, BackHandler, RefreshControl, Text, Vibration, Dimensions } from 'react-native';
+import { View, FlatList, StyleSheet, BackHandler, RefreshControl, Text, Vibration, Dimensions, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { MobileHeader, MobileSidebar, NoteCard, ChatPanel, MoveOverlay, SettingsDrawer, PageContextMenu } from '../components';
+import { MobileHeader, MobileSidebar, NoteCard, ChatPanel, MoveOverlay, SettingsDrawer, PageContextMenu, ShareSheet, SharedPageBanner } from '../components';
 import type { DropTarget } from '../components';
 import { useDataStore } from '../stores/dataStore';
 import { useAuthStore } from '../stores/authStore';
@@ -17,13 +17,14 @@ const EDGE_WIDTH = 20;
 
 export default function MainScreen() {
   const insets = useSafeAreaInsets();
-  const { pages, notes: allNotes, loading, fetchData, refreshData, getNotesForSection, moveNote, updatePage } = useDataStore();
+  const { pages, sharedPages, notes: allNotes, loading, fetchData, refreshData, getNotesForSection, moveNote, updatePage, acceptSharedPage, declineSharedPage } = useDataStore();
   const { user } = useAuthStore();
   const chatState = useChatState();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [currentPageId, setCurrentPageId] = useState<string | null>(null);
   const [currentSectionId, setCurrentSectionId] = useState<string | null>(null);
   const [awaitingResponse, setAwaitingResponse] = useState<{
@@ -54,6 +55,10 @@ export default function MainScreen() {
   // Handle back button on Android
   useEffect(() => {
     const handleBackPress = () => {
+      if (shareOpen) {
+        setShareOpen(false);
+        return true;
+      }
       if (sidebarOpen) {
         setSidebarOpen(false);
         return true;
@@ -67,7 +72,7 @@ export default function MainScreen() {
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
     return () => subscription.remove();
-  }, [sidebarOpen, currentSectionId]);
+  }, [sidebarOpen, currentSectionId, shareOpen]);
 
   // Edge swipe to open sidebar
   const edgeSwipeGesture = Gesture.Pan()
@@ -90,7 +95,10 @@ export default function MainScreen() {
   }, [currentSectionId]);
 
   // Get current page and section data
-  const currentPage = pages.find((p) => p.id === currentPageId);
+  const currentPage = pages.find((p) => p.id === currentPageId)
+    || sharedPages.find((p) => p.id === currentPageId);
+  const currentSharedPage = sharedPages.find((p) => p.id === currentPageId);
+  const isPendingShare = currentSharedPage?.permissionStatus === 'pending';
   const currentSection = currentSectionId
     ? currentPage?.sections.find((s) => s.id === currentSectionId)
     : null;
@@ -625,6 +633,16 @@ export default function MainScreen() {
           onBackPress={handleBackPress}
         />
 
+        {/* Shared page accept/decline banner */}
+        {isPendingShare && currentSharedPage && (
+          <SharedPageBanner
+            role={currentSharedPage.myRole}
+            ownerEmail={currentSharedPage.ownerEmail}
+            onAccept={() => acceptSharedPage(currentPageId!)}
+            onDecline={() => declineSharedPage(currentPageId!)}
+          />
+        )}
+
         {/* Page/Section context menu */}
         <PageContextMenu
           visible={headerMenuOpen}
@@ -633,9 +651,33 @@ export default function MainScreen() {
             setHeaderMenuOpen(false);
             // TODO: Implement rename flow
           }}
+          onShare={() => {
+            setHeaderMenuOpen(false);
+            setShareOpen(true);
+          }}
           onToggleStar={handleToggleStar}
           isStarred={currentPage?.starred || false}
+          isSharedPage={!!currentSharedPage}
           pageName={currentPage?.name}
+          onLeavePage={currentSharedPage ? () => {
+            setHeaderMenuOpen(false);
+            Alert.alert(
+              'Leave page?',
+              'You will lose access.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Leave',
+                  style: 'destructive',
+                  onPress: async () => {
+                    await declineSharedPage(currentPageId!);
+                    setCurrentPageId(pages[0]?.id || null);
+                    setCurrentSectionId(null);
+                  },
+                },
+              ],
+            );
+          } : undefined}
         />
 
         <FlatList
@@ -687,6 +729,16 @@ export default function MainScreen() {
           isOpen={settingsOpen}
           onClose={() => setSettingsOpen(false)}
         />
+
+        {/* Share sheet - slides up from bottom */}
+        {currentPageId && currentPage && (
+          <ShareSheet
+            visible={shareOpen}
+            onClose={() => setShareOpen(false)}
+            pageId={currentPageId}
+            pageName={currentPage.name}
+          />
+        )}
 
         {/* Drag-to-move overlay */}
         <MoveOverlay

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="18122" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" colorMatched="YES" initialViewController="Bcu-3y-fUS">
+    <scenes>
+        <!--View Controller-->
+        <scene sceneID="tne-QT-ifu">
+            <objects>
+                <viewController id="Bcu-3y-fUS" customClass="ViewController" customModule="Example" customModuleProvider="target" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3" userInteractionEnabled="YES" multipleTouchEnabled="YES" opaque="NO" clipsSubviews="YES" clearsContextBeforeDrawing="NO" translatesAutoresizingMaskIntoConstraints="NO">
+                        <subviews>
+                            <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="Logo_White" translatesAutoresizingMaskIntoConstraints="NO" id="LOGO-IMG-001">
+                                <rect key="frame" x="87.5" y="283.5" width="200" height="100"/>
+                            </imageView>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" text="Welcome" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="GJd-Yh-RWb">
+                                <rect key="frame" x="20" y="370" width="280" height="21"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" white="0.0" alpha="1" colorSpace="calibratedWhite"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" text="Subtitle" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="MN2-I3-ftu">
+                                <rect key="frame" x="20" y="400" width="280" height="21"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="15"/>
+                                <color key="textColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                        </subviews>
+                        <constraints>
+                            <constraint firstItem="LOGO-IMG-001" firstAttribute="centerX" secondItem="Bcu-3y-fUS" secondAttribute="centerX" id="cX-LOGO"/>
+                            <constraint firstItem="LOGO-IMG-001" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="cY-LOGO"/>
+                            <constraint firstItem="LOGO-IMG-001" firstAttribute="width" relation="equal" constant="200" id="w-LOGO"/>
+                            <constraint firstItem="LOGO-IMG-001" firstAttribute="height" secondItem="LOGO-IMG-001" secondAttribute="width" multiplier="1/2" id="ratio-LOGO"/>
+                        </constraints>
+                        <color key="backgroundColor" cocoaTouchSystemColor="groupTableViewBackgroundColor"/>
+                    </view>
+                </viewController>
+            </objects>
+        </scene>
+    </scenes>
+    <resources>
+        <image name="Logo_White" width="200" height="100"/>
+    </resources>
+</document>
