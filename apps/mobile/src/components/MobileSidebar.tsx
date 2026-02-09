@@ -45,7 +45,7 @@ export default function MobileSidebar({
   currentSectionId,
 }: MobileSidebarProps) {
   const insets = useSafeAreaInsets();
-  const { pages, sharedPages } = useDataStore();
+  const { pages, sharedPages, tags } = useDataStore();
   const { user } = useAuthStore();
 
   const translateX = useSharedValue(-SCREEN_WIDTH);
@@ -55,6 +55,7 @@ export default function MobileSidebar({
 
   useEffect(() => {
     if (isOpen) {
+      setExpandedPages(new Set()); // Collapse all pages on open
       translateX.value = withTiming(0, { duration: 300 });
       overlayOpacity.value = withTiming(0.5, { duration: 300 });
     } else {
@@ -341,6 +342,19 @@ export default function MobileSidebar({
                 })}
               </View>
             )}
+            {/* Tags */}
+            {tags.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>TAGS</Text>
+                <View style={styles.tagsContainer}>
+                  {tags.map((tag) => (
+                    <View key={tag} style={styles.tagPill}>
+                      <Text style={styles.tagPillText}>{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
           </ScrollView>
 
           {/* Footer */}
@@ -497,6 +511,23 @@ const styles = StyleSheet.create({
   },
   sectionNameActive: {
     color: colors.textPrimary,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  tagPill: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 4,
+  },
+  tagPillText: {
+    fontFamily: theme.fonts.regular,
+    fontSize: 12,
+    color: colors.textMuted,
   },
   footer: {
     borderTopWidth: 1,
