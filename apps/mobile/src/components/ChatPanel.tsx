@@ -348,13 +348,13 @@ export default function ChatPanel({
   const insets = useSafeAreaInsets();
   const [height, setHeight] = useState(HEIGHTS.inputOnly);
   const [inputValue, setInputValue] = useState('');
-  const [isDragging, setIsDragging] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const listRef = useRef<FlatList>(null);
 
   const panelHeight = useSharedValue(HEIGHTS.inputOnly);
-  const dragStartHeight = useRef(HEIGHTS.inputOnly);
+  const dragStartHeightSV = useSharedValue(HEIGHTS.inputOnly);
+  const isDraggingSV = useSharedValue(false);
   const micPulse = useSharedValue(1);
 
   // Waveform recording state
@@ -478,15 +478,14 @@ export default function ChatPanel({
   // Batch state updates after drag ends
   const finishDrag = useCallback((newHeight: number) => {
     setHeight(newHeight);
-    setIsDragging(false);
   }, []);
 
   // Sync animated value for programmatic height changes
   useEffect(() => {
-    if (!isDragging) {
+    if (!isDraggingSV.value) {
       panelHeight.value = withTiming(height, { duration: 300 });
     }
-  }, [height, isDragging, panelHeight]);
+  }, [height, isDraggingSV, panelHeight]);
 
   // Auto-expand when messages arrive
   useEffect(() => {
@@ -504,26 +503,30 @@ export default function ChatPanel({
     }
   }, [messages.length, height]);
 
-  // Drag handle gesture
+  // Drag handle gesture — fully on UI thread using shared values
   const dragGesture = Gesture.Pan()
     .onStart(() => {
-      runOnJS(setIsDragging)(true);
-      dragStartHeight.current = height;
+      isDraggingSV.value = true;
+      dragStartHeightSV.value = panelHeight.value;
     })
     .onUpdate((event) => {
       const deltaY = -event.translationY;
       const minH = messages.length > 0 ? HEIGHTS.collapsed : HEIGHTS.inputOnly;
-      const newHeight = Math.max(minH, Math.min(HEIGHTS.large, dragStartHeight.current + deltaY));
+      const newHeight = Math.max(minH, Math.min(HEIGHTS.large, dragStartHeightSV.value + deltaY));
       panelHeight.value = newHeight;
     })
     .onEnd(() => {
       const currentH = panelHeight.value;
       const minSnap = messages.length > 0 ? HEIGHTS.collapsed : HEIGHTS.inputOnly;
       const snapPoints = [minSnap, HEIGHTS.small, HEIGHTS.medium, HEIGHTS.large];
-      const closest = snapPoints.reduce((prev, curr) =>
-        Math.abs(curr - currentH) < Math.abs(prev - currentH) ? curr : prev
-      );
+      let closest = snapPoints[0];
+      for (let i = 1; i < snapPoints.length; i++) {
+        if (Math.abs(snapPoints[i] - currentH) < Math.abs(closest - currentH)) {
+          closest = snapPoints[i];
+        }
+      }
       panelHeight.value = withTiming(closest, { duration: 300 });
+      isDraggingSV.value = false;
       runOnJS(finishDrag)(closest);
     });
 
@@ -659,13 +662,18 @@ export default function ChatPanel({
           { bottom: insets.bottom + 12 },
         ]}
       >
-        {/* Blur background */}
-        <BlurView
-          style={StyleSheet.absoluteFill}
-          blurType="ultraThinMaterialDark"
-          blurAmount={20}
-          reducedTransparencyFallbackColor="rgba(12, 12, 12, 0.9)"
-        />
+        {/* Blur background — wrapped to clip within border radius */}
+        <View style={styles.blurWrapper}>
+          <BlurView
+            style={StyleSheet.absoluteFill}
+            blurType="ultraThinMaterialDark"
+            blurAmount={20}
+            reducedTransparencyFallbackColor="rgba(12, 12, 12, 0.9)"
+          />
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <View style={{ flex: 1, backgroundColor: 'rgba(10, 10, 10, 0.55)' }} />
+          </View>
+        </View>
 
         {/* Drag handle - show when expanded and has messages */}
         {height > HEIGHTS.collapsed && messages.length > 0 && (
@@ -772,22 +780,25 @@ export default function ChatPanel({
 const styles = StyleSheet.create({
   keyboardAvoid: {
     position: 'absolute',
-    left: 12,
-    right: 12,
+    left: 16,
+    right: 16,
     bottom: 0,
     zIndex: 900,
   },
   container: {
-    backgroundColor: 'rgba(10, 10, 10, 0.55)',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    overflow: 'hidden',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.5,
     shadowRadius: 32,
     elevation: 20,
+  },
+  blurWrapper: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 11,
+    overflow: 'hidden',
   },
   dragHandleContainer: {
     height: 32,

@@ -13,8 +13,12 @@ import { colors, theme } from '../styles';
 export default function SignInScreen() {
   const { login, loading, error } = useAuthStore();
 
-  const handleSignIn = async () => {
-    await login();
+  const handleAppleSignIn = async () => {
+    await login('apple');
+  };
+
+  const handleGoogleSignIn = async () => {
+    await login('google');
   };
 
   return (
@@ -33,19 +37,36 @@ export default function SignInScreen() {
           </View>
         )}
 
-        {/* Sign in button */}
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleSignIn}
-          disabled={loading}
-          activeOpacity={0.7}
-        >
-          {loading ? (
-            <ActivityIndicator color={colors.textPrimary} size="small" />
-          ) : (
-            <Text style={styles.buttonText}>SIGN IN WITH GOOGLE</Text>
-          )}
-        </TouchableOpacity>
+        {/* Sign in buttons */}
+        <View style={styles.buttonGroup}>
+          {/* Apple button — prominent per Apple HIG */}
+          <TouchableOpacity
+            style={[styles.appleButton, loading && styles.buttonDisabled]}
+            onPress={handleAppleSignIn}
+            disabled={loading}
+            activeOpacity={0.7}
+          >
+            {loading ? (
+              <ActivityIndicator color="#000000" size="small" />
+            ) : (
+              <Text style={styles.appleButtonText}>SIGN IN WITH APPLE</Text>
+            )}
+          </TouchableOpacity>
+
+          {/* Google button — outline style */}
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleGoogleSignIn}
+            disabled={loading}
+            activeOpacity={0.7}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.textPrimary} size="small" />
+            ) : (
+              <Text style={styles.buttonText}>SIGN IN WITH GOOGLE</Text>
+            )}
+          </TouchableOpacity>
+        </View>
 
         {/* Footer */}
         <Text style={styles.footer}>Built for operators.</Text>
@@ -70,13 +91,14 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing[12],
   },
   title: {
+    fontFamily: theme.fonts.semibold,
     fontSize: theme.fontSize['3xl'],
-    fontWeight: theme.fontWeight.semibold,
     color: colors.textPrimary,
     letterSpacing: 4,
     marginBottom: theme.spacing.sm,
   },
   subtitle: {
+    fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.md,
     color: colors.textMuted,
     letterSpacing: 0.5,
@@ -89,9 +111,27 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.lg,
   },
   errorText: {
+    fontFamily: theme.fonts.regular,
     color: colors.danger,
     fontSize: theme.fontSize.sm,
     textAlign: 'center',
+  },
+  buttonGroup: {
+    gap: 12,
+    width: '100%',
+    maxWidth: 280,
+  },
+  appleButton: {
+    backgroundColor: '#ffffff',
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xl,
+    alignItems: 'center',
+  },
+  appleButtonText: {
+    fontFamily: theme.fonts.medium,
+    color: '#000000',
+    fontSize: theme.fontSize.sm,
+    letterSpacing: 1.5,
   },
   button: {
     backgroundColor: 'transparent',
@@ -99,21 +139,21 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.xl,
-    minWidth: 240,
     alignItems: 'center',
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonText: {
+    fontFamily: theme.fonts.medium,
     color: colors.textPrimary,
     fontSize: theme.fontSize.sm,
-    fontWeight: theme.fontWeight.medium,
     letterSpacing: 1.5,
   },
   footer: {
     position: 'absolute',
     bottom: theme.spacing.xl,
+    fontFamily: theme.fonts.regular,
     color: colors.textMuted,
     fontSize: theme.fontSize.xs,
     letterSpacing: 0.5,

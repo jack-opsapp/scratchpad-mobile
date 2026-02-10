@@ -1,0 +1,8 @@
+# Keystore properties for release builds
+# Copy this file to gradle.properties and fill in your keystore details
+# DO NOT commit gradle.properties to version control
+
+SLATE_UPLOAD_STORE_FILE=slate-release-key.keystore
+SLATE_UPLOAD_KEY_ALIAS=slate-key-alias
+SLATE_UPLOAD_STORE_PASSWORD=your-store-password
+SLATE_UPLOAD_KEY_PASSWORD=your-key-password

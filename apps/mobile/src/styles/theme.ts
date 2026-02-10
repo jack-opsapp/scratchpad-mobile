@@ -7,10 +7,11 @@ import { colors } from './colors';
 export const theme = {
   colors,
 
-  // Font family - Manrope is the display font, fallback to system
+  // Font family - Manrope is the display font
   fonts: {
-    display: 'Manrope',
-    sans: 'System',
+    regular: 'Manrope-Regular',
+    medium: 'Manrope-Medium',
+    semibold: 'Manrope-SemiBold',
   },
 
   // Font sizes matching web app

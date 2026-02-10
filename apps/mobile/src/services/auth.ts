@@ -1,4 +1,5 @@
 import { authorize, AuthConfiguration } from 'react-native-app-auth';
+import { appleAuth } from '@invertase/react-native-apple-authentication';
 import { supabase } from './supabase';
 import type { User } from '@slate/shared';
 import { GOOGLE_CLIENT_ID_IOS } from '@env';
@@ -54,6 +55,45 @@ export async function signInWithGoogle(): Promise<{ success: boolean; error?: st
 
   } catch (error) {
     console.error('Sign in error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+/**
+ * Sign in with Apple using native iOS authentication
+ */
+export async function signInWithApple(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const appleAuthRequestResponse = await appleAuth.performRequest({
+      requestedOperation: appleAuth.Operation.LOGIN,
+      requestedScopes: [appleAuth.Scope.FULL_NAME, appleAuth.Scope.EMAIL],
+    });
+
+    if (!appleAuthRequestResponse.identityToken) {
+      return { success: false, error: 'No identity token returned from Apple' };
+    }
+
+    const { error } = await supabase.auth.signInWithIdToken({
+      provider: 'apple',
+      token: appleAuthRequestResponse.identityToken,
+      nonce: appleAuthRequestResponse.nonce,
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+
+  } catch (error) {
+    // User cancelled the Apple sign-in flow
+    if ((error as any)?.code === appleAuth.Error.CANCELED) {
+      return { success: false, error: 'Sign in was cancelled' };
+    }
+    console.error('Apple sign in error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'

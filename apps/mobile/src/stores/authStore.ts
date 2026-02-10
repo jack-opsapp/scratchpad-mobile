@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User } from '@slate/shared';
 import { supabase } from '../services/supabase';
-import { getCurrentUser, signInWithGoogle, signOut } from '../services/auth';
+import { getCurrentUser, signInWithGoogle, signInWithApple, signOut } from '../services/auth';
 
 interface AuthState {
   user: User | null;
@@ -13,7 +13,7 @@ interface AuthState {
 
   // Actions
   initialize: () => Promise<void>;
-  login: () => Promise<boolean>;
+  login: (provider?: 'google' | 'apple') => Promise<boolean>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
   setError: (error: string | null) => void;
@@ -55,10 +55,12 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      login: async () => {
+      login: async (provider: 'google' | 'apple' = 'google') => {
         set({ loading: true, error: null });
 
-        const result = await signInWithGoogle();
+        const result = provider === 'apple'
+          ? await signInWithApple()
+          : await signInWithGoogle();
 
         if (result.success) {
           const user = await getCurrentUser();
