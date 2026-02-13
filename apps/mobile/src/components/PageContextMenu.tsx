@@ -7,8 +7,9 @@ import {
   Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Edit3, Star, Share2, LogOut } from 'lucide-react-native';
-import { colors, theme } from '../styles';
+import { Edit3, Star, Share2, LogOut, Home } from 'lucide-react-native';
+import { colors as staticColors, theme } from '../styles';
+import { useTheme } from '../contexts/ThemeContext';
 
 const HEADER_HEIGHT = 56;
 
@@ -19,7 +20,10 @@ interface PageContextMenuProps {
   onToggleStar: () => void;
   onShare?: () => void;
   onLeavePage?: () => void;
+  onSetDefault?: () => void;
+  onClearDefault?: () => void;
   isStarred: boolean;
+  isDefault?: boolean;
   isSharedPage?: boolean;
   pageName?: string;
 }
@@ -31,11 +35,15 @@ export default function PageContextMenu({
   onToggleStar,
   onShare,
   onLeavePage,
+  onSetDefault,
+  onClearDefault,
   isStarred,
+  isDefault,
   isSharedPage,
   pageName,
 }: PageContextMenuProps) {
   const insets = useSafeAreaInsets();
+  const colors = useTheme();
 
   if (!visible) return null;
 
@@ -51,7 +59,7 @@ export default function PageContextMenu({
           onPress={onRename}
           activeOpacity={0.7}
         >
-          <Edit3 size={16} color={colors.textMuted} />
+          <Edit3 size={16} color={staticColors.textMuted} />
           <Text style={styles.menuText}>Rename</Text>
         </TouchableOpacity>
 
@@ -64,23 +72,45 @@ export default function PageContextMenu({
             }}
             activeOpacity={0.7}
           >
-            <Share2 size={16} color={colors.textMuted} />
+            <Share2 size={16} color={staticColors.textMuted} />
             <Text style={styles.menuText}>Share page</Text>
           </TouchableOpacity>
         )}
 
         <TouchableOpacity
-          style={isSharedPage && onLeavePage ? styles.menuItem : styles.menuItemLast}
+          style={styles.menuItem}
           onPress={onToggleStar}
           activeOpacity={0.7}
         >
           <Star
             size={16}
-            color={isStarred ? colors.primary : colors.textMuted}
+            color={isStarred ? colors.primary : staticColors.textMuted}
             fill={isStarred ? colors.primary : 'none'}
           />
           <Text style={styles.menuText}>
             {isStarred ? 'Unstar page' : 'Star page'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={isSharedPage && onLeavePage ? styles.menuItem : styles.menuItemLast}
+          onPress={() => {
+            if (isDefault) {
+              onClearDefault?.();
+            } else {
+              onSetDefault?.();
+            }
+            onClose();
+          }}
+          activeOpacity={0.7}
+        >
+          <Home
+            size={16}
+            color={isDefault ? colors.primary : staticColors.textMuted}
+            fill={isDefault ? colors.primary : 'none'}
+          />
+          <Text style={styles.menuText}>
+            {isDefault ? 'Clear default' : 'Set as default'}
           </Text>
         </TouchableOpacity>
 
@@ -90,8 +120,8 @@ export default function PageContextMenu({
             onPress={onLeavePage}
             activeOpacity={0.7}
           >
-            <LogOut size={16} color={colors.danger} />
-            <Text style={[styles.menuText, { color: colors.danger }]}>Leave page</Text>
+            <LogOut size={16} color={staticColors.danger} />
+            <Text style={[styles.menuText, { color: staticColors.danger }]}>Leave page</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -107,9 +137,9 @@ const styles = StyleSheet.create({
   menu: {
     position: 'absolute',
     right: 8,
-    backgroundColor: colors.surface,
+    backgroundColor: staticColors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     zIndex: 810,
     minWidth: 180,
   },
@@ -120,7 +150,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   menuItemLast: {
     flexDirection: 'row',
@@ -132,6 +162,6 @@ const styles = StyleSheet.create({
   menuText: {
     fontFamily: theme.fonts.regular,
     fontSize: 15,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
 });

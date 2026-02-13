@@ -4,6 +4,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   FlatList,
   Dimensions,
@@ -13,6 +14,8 @@ import {
   InputAccessoryView,
   Keyboard,
   LayoutChangeEvent,
+  Share,
+  Vibration,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -34,12 +37,29 @@ import Voice, {
   SpeechVolumeChangeEvent,
 } from '@react-native-voice/voice';
 import { Send, Mic, Square, ChevronDown, ChevronRight, Check, X, FileText, FolderPlus, StickyNote, Trash2 } from 'lucide-react-native';
-import { colors, theme } from '../styles';
+import { colors as staticColors, theme } from '../styles';
+import { useTheme } from '../contexts/ThemeContext';
+import { useSettingsStore } from '../stores/settingsStore';
 import type { ChatMessage, PlanGroupStatus } from '../hooks/useChatState';
 import type { PlanAction } from '@slate/shared';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const INPUT_ACCESSORY_ID = 'chatInputAccessory';
+
+// Compute color from mode (accent/grayscale) + brightness (0-100) + accent hex
+function computeChatColor(mode: 'accent' | 'grayscale', brightness: number, accentHex: string): string {
+  const b = Math.max(0, Math.min(100, brightness));
+  if (mode === 'grayscale') {
+    const v = Math.round((b / 100) * 255);
+    return `rgb(${v}, ${v}, ${v})`;
+  }
+  // Accent mode: scale accent color by brightness
+  const r = parseInt(accentHex.slice(1, 3), 16);
+  const g = parseInt(accentHex.slice(3, 5), 16);
+  const bl = parseInt(accentHex.slice(5, 7), 16);
+  const f = b / 100;
+  return `rgb(${Math.round(r * f)}, ${Math.round(g * f)}, ${Math.round(bl * f)})`;
+}
 
 // Waveform constants
 const WAVEFORM_BAR_COUNT = 24;
@@ -73,7 +93,7 @@ const WaveformBar = memo(({
     return {
       height,
       width: WAVEFORM_BAR_WIDTH,
-      backgroundColor: colors.primary,
+      backgroundColor: staticColors.primary,
       borderRadius: WAVEFORM_BAR_WIDTH / 2,
       marginHorizontal: WAVEFORM_BAR_GAP / 2,
     };
@@ -105,7 +125,7 @@ function getActionLabel(type: PlanAction['type']): string {
 
 function ActionIcon({ type }: { type: PlanAction['type'] }) {
   const size = 12;
-  const color = type.startsWith('delete') ? colors.danger : colors.textMuted;
+  const color = type.startsWith('delete') ? staticColors.danger : staticColors.textMuted;
   switch (type) {
     case 'create_page': return <FileText size={size} color={color} />;
     case 'create_section': return <FolderPlus size={size} color={color} />;
@@ -118,12 +138,12 @@ function ActionIcon({ type }: { type: PlanAction['type'] }) {
 }
 
 function getStatusDotColor(status: PlanGroupStatus, execState?: string): string {
-  if (execState === 'complete') return colors.success;
+  if (execState === 'complete') return staticColors.success;
   if (execState === 'executing') return '#4a9eff';
   switch (status) {
-    case 'approved': return colors.primary;
-    case 'skipped': return colors.textMuted;
-    default: return colors.border;
+    case 'approved': return staticColors.primary;
+    case 'skipped': return staticColors.textMuted;
+    default: return staticColors.border;
   }
 }
 
@@ -146,6 +166,7 @@ function PlanCard({
   onExecute,
   onCancel,
 }: PlanCardProps) {
+  const colors = useTheme();
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
   const { planData, planGroupStatuses, planExecutionState } = message;
   if (!planData || !planGroupStatuses) return null;
@@ -163,7 +184,7 @@ function PlanCard({
     <View style={planStyles.container}>
       {/* Plan summary / agent message */}
       <View style={styles.messageRow}>
-        <Text style={[styles.messageArrow, styles.arrowAgent]}>{'<-'}</Text>
+        <Text style={[styles.messageArrow, styles.arrowAgent, { color: colors.primary }]}>{'<-'}</Text>
         <Text style={[styles.messageText, styles.messageAgent]}>{message.content}</Text>
       </View>
 
@@ -176,12 +197,12 @@ function PlanCard({
           const isApproved = status === 'approved';
 
           const borderLeftColor = isComplete
-            ? colors.success
+            ? staticColors.success
             : isExecuting && isApproved
               ? '#4a9eff'
               : isApproved
                 ? colors.primary
-                : colors.border;
+                : staticColors.border;
 
           return (
             <View
@@ -211,8 +232,8 @@ function PlanCard({
                 <View style={planStyles.groupMeta}>
                   <Text style={planStyles.actionCount}>{group.actionCount}</Text>
                   {isExpanded
-                    ? <ChevronDown size={14} color={colors.textMuted} />
-                    : <ChevronRight size={14} color={colors.textMuted} />
+                    ? <ChevronDown size={14} color={staticColors.textMuted} />
+                    : <ChevronRight size={14} color={staticColors.textMuted} />
                   }
                 </View>
               </TouchableOpacity>
@@ -239,19 +260,19 @@ function PlanCard({
               {isReviewing && status === 'pending' && (
                 <View style={planStyles.groupButtons}>
                   <TouchableOpacity
-                    style={planStyles.approveButton}
+                    style={[planStyles.approveButton, { borderColor: colors.primary }]}
                     onPress={() => onApproveGroup?.(messageIndex, gi)}
                     activeOpacity={0.7}
                   >
                     <Check size={12} color={colors.primary} />
-                    <Text style={planStyles.approveText}>Approve</Text>
+                    <Text style={[planStyles.approveText, { color: colors.primary }]}>Approve</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={planStyles.skipButton}
                     onPress={() => onSkipGroup?.(messageIndex, gi)}
                     activeOpacity={0.7}
                   >
-                    <X size={12} color={colors.textMuted} />
+                    <X size={12} color={staticColors.textMuted} />
                     <Text style={planStyles.skipText}>Skip</Text>
                   </TouchableOpacity>
                 </View>
@@ -262,7 +283,7 @@ function PlanCard({
                 <View style={planStyles.groupStatusLabel}>
                   <Text style={[
                     planStyles.statusText,
-                    isApproved ? planStyles.statusApproved : planStyles.statusSkippedText,
+                    isApproved ? [planStyles.statusApproved, { color: colors.primary }] : planStyles.statusSkippedText,
                   ]}>
                     {isApproved ? 'Approved' : 'Skipped'}
                   </Text>
@@ -284,7 +305,7 @@ function PlanCard({
             <Text style={planStyles.approveAllText}>Approve All</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[planStyles.executeButton, !hasApproved && planStyles.executeButtonDisabled]}
+            style={[planStyles.executeButton, { backgroundColor: colors.primary }, !hasApproved && planStyles.executeButtonDisabled]}
             onPress={() => hasApproved && onExecute?.(messageIndex)}
             activeOpacity={hasApproved ? 0.7 : 1}
             disabled={!hasApproved}
@@ -312,7 +333,7 @@ function PlanCard({
       {/* Complete state */}
       {isComplete && (
         <View style={planStyles.completeFooter}>
-          <Check size={14} color={colors.success} />
+          <Check size={14} color={staticColors.success} />
           <Text style={planStyles.completeText}>Plan complete</Text>
         </View>
       )}
@@ -346,6 +367,16 @@ export default function ChatPanel({
   onPlanCancel,
 }: ChatPanelProps) {
   const insets = useSafeAreaInsets();
+  const colors = useTheme();
+  const { settings } = useSettingsStore();
+
+  // Compute chat appearance colors from settings
+  // Background: mode determines tint color, slider is opacity
+  const chatBgTint = settings.chat_background_mode === 'accent' ? colors.primary : '#000000';
+  const chatBgOpacity = settings.chat_background_brightness / 100;
+  const chatAgentTextColor = computeChatColor(settings.chat_agent_text_mode, settings.chat_agent_text_brightness, colors.primary);
+  const chatUserTextColor = computeChatColor(settings.chat_user_text_mode, settings.chat_user_text_brightness, colors.primary);
+
   const [height, setHeight] = useState(HEIGHTS.inputOnly);
   const [inputValue, setInputValue] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -585,16 +616,24 @@ export default function ChatPanel({
     }
 
     return (
-      <View style={styles.messageContainer}>
+      <Pressable
+        style={styles.messageContainer}
+        onLongPress={() => {
+          Vibration.vibrate(30);
+          Share.share({ message: item.content });
+        }}
+      >
         {/* Message row */}
         <View style={styles.messageRow}>
-          <Text style={[styles.messageArrow, isUser ? styles.arrowUser : styles.arrowAgent]}>
+          <Text style={[styles.messageArrow, isUser ? styles.arrowUser : styles.arrowAgent, !isUser && { color: colors.primary }]}>
             {isUser ? '→' : '←'}
           </Text>
           <Text
+            selectable={true}
             style={[
               styles.messageText,
               isUser ? styles.messageUser : styles.messageAgent,
+              isUser ? { color: chatUserTextColor } : { color: chatAgentTextColor },
               isError && styles.messageError,
             ]}
           >
@@ -622,11 +661,11 @@ export default function ChatPanel({
         {isConfirmation && (
           <View style={styles.actionButtons}>
             <TouchableOpacity
-              style={styles.confirmButton}
+              style={[styles.confirmButton, { borderColor: colors.primary }]}
               onPress={() => onUserResponse('yes', index)}
               activeOpacity={0.7}
             >
-              <Text style={styles.confirmText}>Yes</Text>
+              <Text style={[styles.confirmText, { color: colors.primary }]}>Yes</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.cancelButton}
@@ -637,7 +676,7 @@ export default function ChatPanel({
             </TouchableOpacity>
           </View>
         )}
-      </View>
+      </Pressable>
     );
   };
 
@@ -646,7 +685,7 @@ export default function ChatPanel({
     <InputAccessoryView nativeID={INPUT_ACCESSORY_ID}>
       <View style={styles.accessoryBar}>
         <TouchableOpacity onPress={() => Keyboard.dismiss()} activeOpacity={0.7}>
-          <Text style={styles.doneButton}>Done</Text>
+          <Text style={[styles.doneButton, { color: colors.primary }]}>Done</Text>
         </TouchableOpacity>
       </View>
     </InputAccessoryView>
@@ -671,7 +710,7 @@ export default function ChatPanel({
             reducedTransparencyFallbackColor="rgba(12, 12, 12, 0.9)"
           />
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            <View style={{ flex: 1, backgroundColor: 'rgba(10, 10, 10, 0.55)' }} />
+            <View style={{ flex: 1, backgroundColor: chatBgTint, opacity: chatBgOpacity }} />
           </View>
         </View>
 
@@ -721,7 +760,7 @@ export default function ChatPanel({
             <Animated.View style={micAnimStyle}>
               <Mic
                 size={24}
-                color={isListening ? colors.primary : colors.textMuted}
+                color={isListening ? colors.primary : staticColors.textMuted}
               />
             </Animated.View>
           </TouchableOpacity>
@@ -731,7 +770,7 @@ export default function ChatPanel({
             value={inputValue}
             onChangeText={setInputValue}
             placeholder={isListening ? 'Listening...' : 'Type or speak...'}
-            placeholderTextColor={isListening ? colors.primary : colors.textMuted}
+            placeholderTextColor={isListening ? colors.primary : staticColors.textMuted}
             style={styles.input}
             multiline={false}
             returnKeyType="send"
@@ -751,7 +790,7 @@ export default function ChatPanel({
               disabled={!inputValue.trim()}
               activeOpacity={0.7}
             >
-              <Send size={18} color={colors.textPrimary} />
+              <Send size={18} color={staticColors.textPrimary} />
             </TouchableOpacity>
           )}
 
@@ -767,7 +806,7 @@ export default function ChatPanel({
               onPress={handleStopRecording}
               activeOpacity={0.7}
             >
-              <Square size={16} color={colors.textPrimary} fill={colors.textPrimary} />
+              <Square size={16} color={staticColors.textPrimary} fill={staticColors.textPrimary} />
             </TouchableOpacity>
           </Animated.View>
         </View>
@@ -812,7 +851,7 @@ const styles = StyleSheet.create({
   dragHandle: {
     width: 48,
     height: 5,
-    backgroundColor: colors.textMuted,
+    backgroundColor: staticColors.textMuted,
     borderRadius: 3,
     opacity: 0.5,
   },
@@ -836,11 +875,11 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   arrowUser: {
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     opacity: 0.6,
   },
   arrowAgent: {
-    color: colors.primary,
+    color: staticColors.primary,
   },
   messageText: {
     fontFamily: theme.fonts.regular,
@@ -849,13 +888,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   messageUser: {
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   messageAgent: {
-    color: colors.textSecondary,
+    color: staticColors.textSecondary,
   },
   messageError: {
-    color: colors.error,
+    color: staticColors.error,
   },
   // Action buttons for clarification/confirmation
   actionButtons: {
@@ -867,7 +906,7 @@ const styles = StyleSheet.create({
   },
   optionButton: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     borderRadius: 6,
     paddingVertical: 8,
     paddingHorizontal: 14,
@@ -875,11 +914,11 @@ const styles = StyleSheet.create({
   optionText: {
     fontFamily: theme.fonts.medium,
     fontSize: 12,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   confirmButton: {
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: staticColors.primary,
     borderRadius: 6,
     paddingVertical: 8,
     paddingHorizontal: 20,
@@ -887,11 +926,11 @@ const styles = StyleSheet.create({
   confirmText: {
     fontFamily: theme.fonts.medium,
     fontSize: 12,
-    color: colors.primary,
+    color: staticColors.primary,
   },
   cancelButton: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     borderRadius: 6,
     paddingVertical: 8,
     paddingHorizontal: 20,
@@ -899,7 +938,7 @@ const styles = StyleSheet.create({
   cancelText: {
     fontFamily: theme.fonts.medium,
     fontSize: 12,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   expandButton: {
     flexDirection: 'row',
@@ -914,13 +953,13 @@ const styles = StyleSheet.create({
   expandArrow: {
     fontFamily: theme.fonts.regular,
     fontSize: 9,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     opacity: 0.6,
   },
   expandText: {
     fontFamily: theme.fonts.semibold,
     fontSize: 9,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
@@ -942,7 +981,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: theme.fonts.regular,
     fontSize: 16,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     padding: 0,
   },
   sendButton: {
@@ -960,16 +999,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: staticColors.surface,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
   doneButton: {
     fontFamily: theme.fonts.semibold,
     fontSize: 15,
-    color: colors.primary,
+    color: staticColors.primary,
     paddingVertical: 4,
     paddingHorizontal: 8,
   },
@@ -1015,7 +1054,7 @@ const planStyles = StyleSheet.create({
   },
   groupCard: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     borderRadius: 8,
     padding: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.02)',
@@ -1038,11 +1077,11 @@ const planStyles = StyleSheet.create({
     fontFamily: theme.fonts.regular,
     fontSize: 13,
     lineHeight: 18,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   groupDescriptionSkipped: {
     textDecorationLine: 'line-through',
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   groupMeta: {
     flexDirection: 'row',
@@ -1052,7 +1091,7 @@ const planStyles = StyleSheet.create({
   actionCount: {
     fontFamily: theme.fonts.regular,
     fontSize: 11,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   actionList: {
     marginTop: 8,
@@ -1067,7 +1106,7 @@ const planStyles = StyleSheet.create({
   actionText: {
     fontFamily: theme.fonts.regular,
     fontSize: 12,
-    color: colors.textSecondary,
+    color: staticColors.textSecondary,
     flex: 1,
   },
   groupButtons: {
@@ -1081,7 +1120,7 @@ const planStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: staticColors.primary,
     borderRadius: 6,
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -1089,14 +1128,14 @@ const planStyles = StyleSheet.create({
   approveText: {
     fontFamily: theme.fonts.medium,
     fontSize: 11,
-    color: colors.primary,
+    color: staticColors.primary,
   },
   skipButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     borderRadius: 6,
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -1104,7 +1143,7 @@ const planStyles = StyleSheet.create({
   skipText: {
     fontFamily: theme.fonts.medium,
     fontSize: 11,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   groupStatusLabel: {
     marginTop: 8,
@@ -1115,10 +1154,10 @@ const planStyles = StyleSheet.create({
     fontSize: 11,
   },
   statusApproved: {
-    color: colors.primary,
+    color: staticColors.primary,
   },
   statusSkippedText: {
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   footer: {
     flexDirection: 'row',
@@ -1128,7 +1167,7 @@ const planStyles = StyleSheet.create({
   },
   approveAllButton: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     borderRadius: 6,
     paddingVertical: 8,
     paddingHorizontal: 14,
@@ -1136,28 +1175,28 @@ const planStyles = StyleSheet.create({
   approveAllText: {
     fontFamily: theme.fonts.medium,
     fontSize: 12,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   executeButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: staticColors.primary,
     borderRadius: 6,
     paddingVertical: 8,
     paddingHorizontal: 14,
   },
   executeButtonDisabled: {
-    backgroundColor: colors.border,
+    backgroundColor: staticColors.border,
   },
   executeText: {
     fontFamily: theme.fonts.medium,
     fontSize: 12,
-    color: colors.bg,
+    color: staticColors.bg,
   },
   executeTextDisabled: {
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   cancelPlanButton: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     borderRadius: 6,
     paddingVertical: 8,
     paddingHorizontal: 14,
@@ -1165,7 +1204,7 @@ const planStyles = StyleSheet.create({
   cancelPlanText: {
     fontFamily: theme.fonts.medium,
     fontSize: 12,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   executingFooter: {
     flexDirection: 'row',
@@ -1177,7 +1216,7 @@ const planStyles = StyleSheet.create({
   executingText: {
     fontFamily: theme.fonts.regular,
     fontSize: 12,
-    color: colors.textSecondary,
+    color: staticColors.textSecondary,
   },
   completeFooter: {
     flexDirection: 'row',
@@ -1189,6 +1228,6 @@ const planStyles = StyleSheet.create({
   completeText: {
     fontFamily: theme.fonts.medium,
     fontSize: 12,
-    color: colors.success,
+    color: staticColors.success,
   },
 });

@@ -1,25 +1,33 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, FlatList, StyleSheet, BackHandler, RefreshControl, Text, Vibration, Dimensions, Alert } from 'react-native';
+import { View, FlatList, StyleSheet, BackHandler, RefreshControl, Text, Vibration, Dimensions, Alert, LayoutAnimation, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { MobileHeader, MobileSidebar, NoteCard, ChatPanel, MoveOverlay, SettingsDrawer, PageContextMenu, ShareSheet, SharedPageBanner } from '../components';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
+import { MobileHeader, MobileSidebar, NoteCard, ChatPanel, MoveOverlay, SettingsDrawer, PageContextMenu, ShareSheet, SharedPageBanner, HomeView } from '../components';
 import type { DropTarget } from '../components';
+import type { NoteDensity } from '../components/NoteCard';
 import { useDataStore } from '../stores/dataStore';
 import { useAuthStore } from '../stores/authStore';
+import { useSettingsStore } from '../stores/settingsStore';
 import { useChatState } from '../hooks/useChatState';
 import { apiClient } from '../services/api';
-import { colors, theme } from '../styles';
+import { colors as staticColors, theme } from '../styles';
+import { useTheme } from '../contexts/ThemeContext';
 import type { Note, AgentResponse, FrontendAction, PlanAction } from '@slate/shared';
 import { supabase } from '../services/supabase';
 import type { PlanGroupStatus } from '../hooks/useChatState';
+
+const ZOOM_LEVELS: NoteDensity[] = ['compact', 'default', 'comfortable', 'expanded'];
 
 const EDGE_WIDTH = 20;
 
 export default function MainScreen() {
   const insets = useSafeAreaInsets();
-  const { pages, sharedPages, notes: allNotes, loading, fetchData, refreshData, getNotesForSection, moveNote, updatePage, acceptSharedPage, declineSharedPage } = useDataStore();
+  const { pages, sharedPages, notes: allNotes, userProfiles, loading, fetchData, refreshData, getNotesForSection, moveNote, updateNote, removeNote, updatePage, acceptSharedPage, declineSharedPage } = useDataStore();
   const { user } = useAuthStore();
+  const { settings } = useSettingsStore();
   const chatState = useChatState();
+  const colors = useTheme();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -41,16 +49,104 @@ export default function MainScreen() {
     ? allNotes.find((n) => n.id === draggingNoteId) ?? null
     : null;
 
+  // Zoom level: 0=compact, 1=default, 2=comfortable (default), 3=expanded
+  const [zoomIndex, setZoomIndex] = useState(2);
+  const zoomIndexRef = useRef(2);
+  const density: NoteDensity = ZOOM_LEVELS[zoomIndex];
+
+  // Home view zoom: 0=2col, 1=1col, 2=1col+3 notes, 3=1col+6 notes
+  const [homeZoomIndex, setHomeZoomIndex] = useState(0);
+  const homeZoomIndexRef = useRef(0);
+
+  // Sort state
+  type SortMode = 'created_desc' | 'created_asc' | 'alpha' | 'completed_last';
+  const [sortMode, setSortMode] = useState<SortMode>(
+    (settings.note_sort_order as SortMode) || 'created_desc'
+  );
+  const [customSortOrder, setCustomSortOrder] = useState<string[] | null>(null);
+
+  // Default page — apply once on first data load
+  const hasAppliedDefault = useRef(false);
+
+  // Pinch gesture — live visual scaling + level change on release
+  const pinchScale = useSharedValue(1);
+
+  const pinchAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pinchScale.value }],
+  }));
+
+  const handlePinchEnd = useCallback((scale: number) => {
+    if (!currentPageId) {
+      // Home view: cycle zoom levels 0-3
+      if (scale > 1.3) {
+        const newIdx = Math.min(3, homeZoomIndexRef.current + 1);
+        if (newIdx !== homeZoomIndexRef.current) {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          homeZoomIndexRef.current = newIdx;
+          setHomeZoomIndex(newIdx);
+        }
+      } else if (scale < 0.7) {
+        const newIdx = Math.max(0, homeZoomIndexRef.current - 1);
+        if (newIdx !== homeZoomIndexRef.current) {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          homeZoomIndexRef.current = newIdx;
+          setHomeZoomIndex(newIdx);
+        }
+      }
+    } else {
+      // Page view: change note density
+      if (scale > 1.3) {
+        const newIdx = Math.min(3, zoomIndexRef.current + 1);
+        if (newIdx !== zoomIndexRef.current) {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          zoomIndexRef.current = newIdx;
+          setZoomIndex(newIdx);
+        }
+      } else if (scale < 0.7) {
+        const newIdx = Math.max(0, zoomIndexRef.current - 1);
+        if (newIdx !== zoomIndexRef.current) {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          zoomIndexRef.current = newIdx;
+          setZoomIndex(newIdx);
+        }
+      }
+    }
+  }, [currentPageId]);
+
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate((event) => {
+      pinchScale.value = event.scale;
+    })
+    .onEnd(() => {
+      const scale = pinchScale.value;
+      pinchScale.value = withTiming(1, { duration: 200 });
+      runOnJS(handlePinchEnd)(scale);
+    });
+
   useEffect(() => {
     fetchData();
   }, []);
 
-  // Auto-select first page
+  // Apply default page on first data load
   useEffect(() => {
-    if (!currentPageId && pages.length > 0) {
-      setCurrentPageId(pages[0].id);
+    if (hasAppliedDefault.current) return;
+    if (pages.length === 0 && sharedPages.length === 0) return;
+    const defaultPageId = settings.default_page_id;
+    if (!defaultPageId) {
+      hasAppliedDefault.current = true;
+      return;
     }
-  }, [pages, currentPageId]);
+    const allPages = [...pages, ...sharedPages];
+    const match = allPages.find((p) => p.id === defaultPageId);
+    if (match) {
+      setCurrentPageId(defaultPageId);
+      if (settings.default_section_id) {
+        const sectionMatch = match.sections.find((s) => s.id === settings.default_section_id);
+        if (sectionMatch) setCurrentSectionId(settings.default_section_id);
+      }
+    }
+    hasAppliedDefault.current = true;
+  }, [pages, sharedPages, settings.default_page_id, settings.default_section_id]);
 
   // Handle back button on Android
   useEffect(() => {
@@ -83,9 +179,10 @@ export default function MainScreen() {
     })
     .minDistance(10);
 
-  const handleNavigate = useCallback((pageId: string, sectionId: string | null) => {
+  const handleNavigate = useCallback((pageId: string | null, sectionId: string | null) => {
     setCurrentPageId(pageId);
     setCurrentSectionId(sectionId);
+    setCustomSortOrder(null);
   }, []);
 
   const handleBackPress = useCallback(() => {
@@ -125,6 +222,13 @@ export default function MainScreen() {
         case 'clear_filters':
           // Reset to default view
           break;
+        case 'sort_notes': {
+          const noteIds = (action as unknown as { note_ids: string[] }).note_ids;
+          if (noteIds && Array.isArray(noteIds)) {
+            setCustomSortOrder(noteIds);
+          }
+          break;
+        }
       }
     }
   }, [pages]);
@@ -161,6 +265,8 @@ export default function MainScreen() {
           currentPage: currentPage?.name,
           currentSection: currentSection?.name,
         },
+        customApiKey: settings.custom_openai_key || undefined,
+        customModel: settings.custom_openai_model || undefined,
       });
 
       // Execute any frontend actions
@@ -257,6 +363,37 @@ export default function MainScreen() {
     message: string,
     confirmedValue?: string | null,
   ) => {
+    // Check for API key before processing
+    if (!settings.custom_openai_key && !confirmedValue) {
+      Alert.alert(
+        'API Key Required',
+        'Please enter an OpenAI API key in Settings > Developer to use the chat assistant.',
+        [
+          {
+            text: 'What is an API Key?',
+            onPress: () => {
+              chatState.addAgentMessage(
+                'An OpenAI API key is a secret credential that allows this app to access OpenAI\'s AI models (like GPT-4). ' +
+                'You can get your API key from https://platform.openai.com/api-keys. ' +
+                'Once you have your key, go to Settings > Developer and paste it in the "OpenAI API Key" field. ' +
+                'Your key is stored securely on your device and sent directly to OpenAI with each request.',
+                'text_response'
+              );
+            },
+          },
+          {
+            text: 'Go to Settings',
+            onPress: () => setSettingsOpen(true),
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+        ]
+      );
+      return;
+    }
+
     if (!confirmedValue) {
       chatState.addUserMessage(message);
     }
@@ -271,7 +408,7 @@ export default function MainScreen() {
     await processQueue();
     chatState.setProcessing(false);
     chatState.compactHistory();
-  }, [chatState, processMessage, processQueue]);
+  }, [chatState, processMessage, processQueue, settings.custom_openai_key, setSettingsOpen]);
 
   // Handle user responses to clarifications/confirmations
   const handleUserResponse = useCallback(async (
@@ -539,6 +676,23 @@ export default function MainScreen() {
     setHeaderMenuOpen(false);
   }, [currentPageId, currentPage, updatePage]);
 
+  const isDefaultPage = settings.default_page_id === currentPageId;
+
+  const handleSetDefault = useCallback(() => {
+    if (!currentPageId) return;
+    const { updateSetting } = useSettingsStore.getState();
+    updateSetting('default_page_id', currentPageId);
+    updateSetting('default_section_id', currentSectionId);
+    setHeaderMenuOpen(false);
+  }, [currentPageId, currentSectionId]);
+
+  const handleClearDefault = useCallback(() => {
+    const { updateSetting } = useSettingsStore.getState();
+    updateSetting('default_page_id', null);
+    updateSetting('default_section_id', null);
+    setHeaderMenuOpen(false);
+  }, []);
+
   // --- Drag-to-move handlers ---
   const handleDragStart = useCallback((noteId: string, absoluteY: number) => {
     setDraggingNoteId(noteId);
@@ -579,17 +733,60 @@ export default function MainScreen() {
     dropTargetsRef.current = targets;
   }, []);
 
-  // Get notes for current view
+  // --- Note toggle/delete handlers ---
+  const handleNoteToggle = useCallback((noteId: string) => {
+    const note = allNotes.find((n) => n.id === noteId);
+    if (!note) return;
+    const nowCompleted = !note.completed;
+    updateNote(noteId, {
+      completed: nowCompleted,
+      completed_by_user_id: nowCompleted ? user?.id ?? null : null,
+      completed_at: nowCompleted ? new Date().toISOString() : null,
+    });
+  }, [allNotes, updateNote, user]);
+
+  const handleNoteDelete = useCallback((noteId: string) => {
+    removeNote(noteId);
+  }, [removeNote]);
+
+  // Get notes for current view, with sorting applied
   const getNotes = (): Note[] => {
     if (!currentPage) return [];
 
+    let result: Note[];
     if (currentSectionId) {
-      return getNotesForSection(currentSectionId);
+      result = getNotesForSection(currentSectionId);
+    } else {
+      result = currentPage.sections.flatMap((section) =>
+        getNotesForSection(section.id)
+      );
     }
 
-    return currentPage.sections.flatMap((section) =>
-      getNotesForSection(section.id)
-    );
+    // Apply custom AI sort order if present
+    if (customSortOrder) {
+      const orderMap = new Map(customSortOrder.map((id, i) => [id, i]));
+      return [...result].sort((a, b) => {
+        const ai = orderMap.get(a.id) ?? Infinity;
+        const bi = orderMap.get(b.id) ?? Infinity;
+        return ai - bi;
+      });
+    }
+
+    // Apply sort mode
+    switch (sortMode) {
+      case 'created_asc':
+        return [...result].sort((a, b) => a.created_at.localeCompare(b.created_at));
+      case 'alpha':
+        return [...result].sort((a, b) => a.content.localeCompare(b.content));
+      case 'completed_last':
+        return [...result].sort((a, b) => {
+          if (a.completed !== b.completed) return a.completed ? 1 : -1;
+          return b.created_at.localeCompare(a.created_at);
+        });
+      case 'created_desc':
+      default:
+        return [...result].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    }
   };
 
   const notes = getNotes();
@@ -598,24 +795,24 @@ export default function MainScreen() {
     ({ item: note }: { item: Note }) => (
       <NoteCard
         note={note}
+        density={density}
+        creatorProfile={note.created_by_user_id ? userProfiles[note.created_by_user_id] : undefined}
+        onToggle={handleNoteToggle}
+        onDelete={handleNoteDelete}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       />
     ),
-    [handleDragStart, handleDragMove, handleDragEnd, handleDragCancel]
+    [density, userProfiles, handleNoteToggle, handleNoteDelete, handleDragStart, handleDragMove, handleDragEnd, handleDragCancel]
   );
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyTitle}>
-        {currentPage ? 'No notes yet' : 'Select a page'}
-      </Text>
+      <Text style={styles.emptyTitle}>No notes yet</Text>
       <Text style={styles.emptySubtitle}>
-        {currentPage
-          ? 'Use the chat to add notes to this page'
-          : 'Open the menu to select a page'}
+        Use the chat to add notes to this page
       </Text>
     </View>
   );
@@ -624,12 +821,12 @@ export default function MainScreen() {
     <GestureDetector gesture={edgeSwipeGesture}>
       <View style={styles.container}>
         <MobileHeader
-          currentPage={currentPage?.name}
+          currentPage={currentPage?.name || (currentPageId ? undefined : 'Home')}
           currentSection={currentSection?.name}
           showBack={!!currentSectionId}
           isDrawerOpen={sidebarOpen}
           onMenuPress={() => setSidebarOpen(!sidebarOpen)}
-          onMorePress={() => setHeaderMenuOpen(!headerMenuOpen)}
+          onMorePress={() => currentPageId ? setHeaderMenuOpen(!headerMenuOpen) : undefined}
           onBackPress={handleBackPress}
         />
 
@@ -659,6 +856,9 @@ export default function MainScreen() {
           isStarred={currentPage?.starred || false}
           isSharedPage={!!currentSharedPage}
           pageName={currentPage?.name}
+          isDefault={isDefaultPage}
+          onSetDefault={handleSetDefault}
+          onClearDefault={handleClearDefault}
           onLeavePage={currentSharedPage ? () => {
             setHeaderMenuOpen(false);
             Alert.alert(
@@ -680,25 +880,94 @@ export default function MainScreen() {
           } : undefined}
         />
 
-        <FlatList
-          data={notes}
-          keyExtractor={(note) => note.id}
-          renderItem={renderNote}
-          ListEmptyComponent={renderEmpty}
-          contentContainerStyle={[
-            notes.length === 0 ? styles.emptyList : styles.notesList,
-            { paddingBottom: 180 + insets.bottom },
-          ]}
-          refreshControl={
-            <RefreshControl
-              refreshing={loading}
-              onRefresh={refreshData}
-              tintColor={colors.textMuted}
-            />
-          }
-          showsVerticalScrollIndicator={false}
-          keyboardDismissMode="on-drag"
-        />
+        {/* Main content: HomeView when no page selected, FlatList otherwise */}
+        {!currentPageId ? (
+          <GestureDetector gesture={pinchGesture}>
+            <Animated.View style={[{ flex: 1 }, pinchAnimatedStyle]}>
+              <HomeView
+                pages={[...pages, ...sharedPages]}
+                notes={allNotes}
+                loading={loading}
+                zoomLevel={homeZoomIndex}
+                onNavigate={handleNavigate}
+                onRefresh={refreshData}
+                bottomInset={insets.bottom}
+              />
+            </Animated.View>
+          </GestureDetector>
+        ) : (
+          <GestureDetector gesture={pinchGesture}>
+            <Animated.View style={[{ flex: 1 }, pinchAnimatedStyle]}>
+              {/* Sort chip bar */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ flexGrow: 0, flexShrink: 0 }}
+                contentContainerStyle={styles.sortChipBar}
+              >
+                {([
+                  { key: 'created_desc' as const, label: 'NEWEST' },
+                  { key: 'created_asc' as const, label: 'OLDEST' },
+                  { key: 'alpha' as const, label: 'A-Z' },
+                  { key: 'completed_last' as const, label: 'TODO FIRST' },
+                ] as const).map((chip) => (
+                  <TouchableOpacity
+                    key={chip.key}
+                    style={[
+                      styles.sortChip,
+                      sortMode === chip.key && !customSortOrder && styles.sortChipActive,
+                    ]}
+                    onPress={() => {
+                      setSortMode(chip.key);
+                      setCustomSortOrder(null);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.sortChipText,
+                        sortMode === chip.key && !customSortOrder && styles.sortChipTextActive,
+                      ]}
+                    >
+                      {chip.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+                {customSortOrder && (
+                  <TouchableOpacity
+                    style={[styles.sortChip, styles.sortChipActive]}
+                    onPress={() => setCustomSortOrder(null)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.sortChipText, styles.sortChipTextActive]}>
+                      AI SORT ✕
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </ScrollView>
+
+              <FlatList
+                data={notes}
+                keyExtractor={(note) => note.id}
+                renderItem={renderNote}
+                ListEmptyComponent={renderEmpty}
+                contentContainerStyle={[
+                  notes.length === 0 ? styles.emptyList : styles.notesList,
+                  { paddingBottom: 180 + insets.bottom },
+                ]}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={loading}
+                    onRefresh={refreshData}
+                    tintColor={staticColors.textMuted}
+                  />
+                }
+                showsVerticalScrollIndicator={false}
+                keyboardDismissMode="on-drag"
+              />
+            </Animated.View>
+          </GestureDetector>
+        )}
 
         {/* Floating chat panel - hidden when sidebar open */}
         <ChatPanel
@@ -720,7 +989,7 @@ export default function MainScreen() {
           onClose={() => setSidebarOpen(false)}
           onNavigate={handleNavigate}
           onSettingsPress={() => setSettingsOpen(true)}
-          currentPageId={currentPageId || undefined}
+          currentPageId={currentPageId}
           currentSectionId={currentSectionId}
         />
 
@@ -757,7 +1026,7 @@ export default function MainScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: staticColors.bg,
   },
   notesList: {
     paddingHorizontal: 16,
@@ -774,15 +1043,39 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: theme.fonts.medium,
     fontSize: 18,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     marginBottom: 12,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontFamily: theme.fonts.regular,
     fontSize: 14,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  sortChipBar: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  sortChip: {
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  sortChipActive: {
+    borderColor: staticColors.primary,
+  },
+  sortChipText: {
+    fontFamily: theme.fonts.medium,
+    fontSize: 11,
+    color: staticColors.textMuted,
+    letterSpacing: 0.5,
+  },
+  sortChipTextActive: {
+    color: staticColors.primary,
   },
 });
