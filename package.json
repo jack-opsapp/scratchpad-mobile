@@ -26,6 +26,8 @@
   "dependencies": {
     "@react-native-community/blur": "^4.4.1",
     "@react-native-voice/voice": "^3.2.4",
-    "hoist-non-react-statics": "^3.3.2"
+    "cookie": "^1.1.1",
+    "hoist-non-react-statics": "^3.3.2",
+    "set-cookie-parser": "^3.0.1"
   }
 }
