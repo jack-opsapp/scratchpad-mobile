@@ -19,6 +19,7 @@ export default function VoiceInput({ onTranscript, onRecordingChange, onAudioDat
   const [supported, setSupported] = useState(true);
 
   const recognitionRef = useRef(null);
+  const isRecordingRef = useRef(false); // Ref mirror of isRecording to avoid stale closures
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
   const animationFrameRef = useRef(null);
@@ -70,8 +71,8 @@ export default function VoiceInput({ onTranscript, onRecordingChange, onAudioDat
     };
 
     recognition.onend = () => {
-      // Recognition ended naturally
-      if (isRecording) {
+      // Use ref to avoid stale closure over isRecording state
+      if (isRecordingRef.current) {
         stopRecording();
       }
     };
@@ -165,6 +166,7 @@ export default function VoiceInput({ onTranscript, onRecordingChange, onAudioDat
     setTranscript('');
     setError(null);
     setIsRecording(true);
+    isRecordingRef.current = true;
 
     try {
       recognitionRef.current.start();
@@ -173,10 +175,13 @@ export default function VoiceInput({ onTranscript, onRecordingChange, onAudioDat
       console.error('Start recording error:', err);
       setError('Could not start recording');
       setIsRecording(false);
+      isRecordingRef.current = false;
     }
   };
 
   const stopRecording = () => {
+    if (!isRecordingRef.current) return; // Guard against double-stop
+    isRecordingRef.current = false;
     setIsRecording(false);
 
     if (recognitionRef.current) {

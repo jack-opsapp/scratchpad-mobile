@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   ChevronDown,
   ChevronRight,
@@ -22,6 +23,7 @@ import {
   Keyboard,
   Share2,
   AlignJustify,
+  CheckCheck,
 } from 'lucide-react';
 
 import { useTypewriter } from '../hooks/useTypewriter.js';
@@ -93,6 +95,7 @@ function ApiErrorBadge({ error, onDismiss }) {
 }
 
 import useChatState from '../hooks/useChatState.js';
+import { supabase } from '../config/supabase.js';
 import { dataStore } from '../lib/storage.js';
 import { callAgent } from '../lib/agent.js';
 import { executeGroup, summarizeResults } from '../lib/planExecutor.js';
@@ -169,6 +172,10 @@ function getUserInitials(user) {
  * @param {function} props.onSignOut - Sign out handler
  */
 export function MainApp({ user, onSignOut }) {
+  // URL params for page/section persistence
+  const { pageId: urlPageId, sectionId: urlSectionId } = useParams();
+  const navigate = useNavigate();
+
   // Mobile/responsive state
   const { isMobile, isTablet, isDesktop } = useMediaQuery();
   const isOnline = useOnlineStatus();
@@ -216,6 +223,10 @@ export function MainApp({ user, onSignOut }) {
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [filterIncomplete, setFilterIncomplete] = useState(false);
   const [filterTag, setFilterTag] = useState([]);
+  const [completedExpanded, setCompletedExpanded] = useState(false);
+  // Swipe to cycle view modes (mobile)
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
   const [sortBy, setSortBy] = useState('status'); // Default: incomplete first
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [groupBy] = useState('status');
@@ -225,6 +236,7 @@ export function MainApp({ user, onSignOut }) {
   const [inputValue, setInputValue] = useState('');
   const [processing, setProcessing] = useState(false);
   const inputRef = useRef(null);
+  const agentSaveLock = useRef(false); // Prevents saveAll from running during agent operations
 
   // Modal/menu state
   const [contextMenu, setContextMenu] = useState(null);
@@ -298,7 +310,19 @@ export function MainApp({ user, onSignOut }) {
       setCollabCounts(counts);
 
       setExpandedPages(allPages.map(p => p.id));
-      if (owned.length > 0) {
+
+      // Restore from URL if page/section params present, otherwise default
+      const urlTarget = urlPageId && allPages.find(p => p.id === urlPageId);
+      if (urlTarget) {
+        setCurrentPage(urlPageId);
+        if (urlSectionId && urlTarget.sections?.some(s => s.id === urlSectionId)) {
+          setCurrentSection(urlSectionId);
+          setViewingPageLevel(false);
+        } else {
+          setCurrentSection(urlTarget.sections?.[0]?.id || null);
+          setViewingPageLevel(true);
+        }
+      } else if (owned.length > 0) {
         setCurrentPage(owned[0].id);
         setCurrentSection(owned[0].sections?.[0]?.id || null);
       } else if (shared.length > 0) {
@@ -320,9 +344,9 @@ export function MainApp({ user, onSignOut }) {
     }
   }, [settings]);
 
-  // Save data on changes
+  // Save data on changes (locked during agent operations to prevent overwriting DB changes)
   useEffect(() => {
-    if (!loading) {
+    if (!loading && !agentSaveLock.current) {
       dataStore.saveAll({ pages, tags, notes, boxConfigs });
     }
   }, [pages, tags, notes, boxConfigs, loading]);
@@ -351,6 +375,15 @@ export function MainApp({ user, onSignOut }) {
     setContentVisible(false);
     setTimeout(() => setContentVisible(true), 300);
   }, [currentSection, viewingPageLevel]);
+
+  // Sync URL with current page/section navigation
+  useEffect(() => {
+    if (loading || !currentPage) return;
+    const path = currentSection && !viewingPageLevel
+      ? `/p/${currentPage}/s/${currentSection}`
+      : `/p/${currentPage}`;
+    navigate(path, { replace: true });
+  }, [currentPage, currentSection, viewingPageLevel, loading]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -381,7 +414,7 @@ export function MainApp({ user, onSignOut }) {
             starred: false,
             sections: [],
           };
-          setPages(pg => [...pg, np]);
+          mutateOwnedPages(pg => [...pg, np]);
           setExpandedPages(ep => [...ep, np.id]);
           setCurrentPage(np.id);
           setViewingPageLevel(true);
@@ -392,7 +425,7 @@ export function MainApp({ user, onSignOut }) {
           const name = prompt('New section name:');
           if (name) {
             const ns = { id: generateId(), name };
-            setPages(pg =>
+            mutateOwnedPages(pg =>
               pg.map(p =>
                 p.id === currentPage
                   ? { ...p, sections: [...p.sections, ns] }
@@ -409,6 +442,13 @@ export function MainApp({ user, onSignOut }) {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [searchOpen, currentPage]);
+
+  // Helper: apply a transformation to pages state AND ownedPages state atomically.
+  // Use instead of bare setPages() for all owned-page mutations so sidebar stays in sync.
+  const mutateOwnedPages = (transform) => {
+    setPages(prev => transform(prev));
+    setOwnedPages(prev => transform(prev));
+  };
 
   // Computed values
   const allPages = [...ownedPages, ...sharedPages];
@@ -751,19 +791,29 @@ export function MainApp({ user, onSignOut }) {
     setNewNoteId(noteId);
     setTimeout(() => setNewNoteId(null), 3000);
 
-    setNotes([
-      ...notes,
-      {
-        id: noteId,
-        sectionId: targetSection,
-        content: parsed.content,
-        tags: parsed.tags || [],
-        completed: false,
-        date: parsed.date,
-        createdAt: Date.now(),
-        createdBy: 'Jackson',
-      },
-    ]);
+    const newNote = {
+      id: noteId,
+      sectionId: targetSection,
+      content: parsed.content,
+      tags: parsed.tags || [],
+      completed: false,
+      date: parsed.date,
+      created_by_user_id: user?.id || null,
+    };
+    setNotes(prev => [...prev, newNote]);
+
+    // Direct Supabase persist
+    supabase.from('notes').upsert({
+      id: noteId,
+      section_id: targetSection,
+      content: parsed.content,
+      tags: parsed.tags || [],
+      completed: false,
+      date: parsed.date || null,
+      created_by_user_id: user?.id || null,
+    }, { onConflict: 'id' })
+      .then(({ error }) => { if (error) console.error('Note create persist failed:', error); });
+
     setInputValue('');
   };
 
@@ -781,7 +831,7 @@ export function MainApp({ user, onSignOut }) {
           name: pendingNote.parsed.section,
         });
       }
-      setPages([...pages, newPage]);
+      mutateOwnedPages(prev => [...prev, newPage]);
       setExpandedPages([...expandedPages, newPage.id]);
       setCurrentPage(newPage.id);
       if (newPage.sections[0]) {
@@ -797,8 +847,8 @@ export function MainApp({ user, onSignOut }) {
         id: generateId(),
         name: pendingNote.parsed.section,
       };
-      setPages(
-        pages.map(p =>
+      mutateOwnedPages(prev =>
+        prev.map(p =>
           p.id === currentPage
             ? { ...p, sections: [...p.sections, newSection] }
             : p
@@ -821,6 +871,7 @@ export function MainApp({ user, onSignOut }) {
 
     planState.startExecution();
     setProcessing(true);
+    agentSaveLock.current = true; // Lock saveAll during plan execution
 
     let currentContext = { ...planState.context };
     const allAnimatingIds = new Set();
@@ -896,6 +947,7 @@ export function MainApp({ user, onSignOut }) {
       console.error('Execution error:', error);
       chatState.addAgentMessage(`Error executing plan: ${error.message}`, 'error');
     } finally {
+      agentSaveLock.current = false; // Unlock saveAll after plan execution
       setProcessing(false);
     }
   };
@@ -1004,6 +1056,7 @@ export function MainApp({ user, onSignOut }) {
   // Chat message handler - new simplified architecture
   const handleChatMessage = async (message, confirmedValue = null) => {
     chatState.setProcessing(true);
+    agentSaveLock.current = true; // Lock saveAll during agent operation
     if (!confirmedValue) {
       chatState.addUserMessage(message);
     }
@@ -1117,6 +1170,7 @@ export function MainApp({ user, onSignOut }) {
       console.error('Chat error:', error);
       chatState.addAgentMessage('Sorry, I encountered an error. Please try again.', 'error');
     } finally {
+      agentSaveLock.current = false; // Unlock saveAll after agent operation + refresh
       chatState.setProcessing(false);
     }
   };
@@ -1421,8 +1475,7 @@ export function MainApp({ user, onSignOut }) {
                             starred: false,
                             sections: [],
                           };
-                          setPages([...pages, np]);
-                          setOwnedPages([...ownedPages, np]);
+                          mutateOwnedPages(prev => [...prev, np]);
                           setExpandedPages([...expandedPages, np.id]);
                           setPageRoles({ ...pageRoles, [np.id]: 'owner' });
                         }
@@ -1472,8 +1525,8 @@ export function MainApp({ user, onSignOut }) {
                             autoFocus
                             value={page.name}
                             onChange={e =>
-                              setPages(
-                                pages.map(p =>
+                              mutateOwnedPages(prev =>
+                                prev.map(p =>
                                   p.id === page.id
                                     ? { ...p, name: e.target.value }
                                     : p
@@ -1570,8 +1623,8 @@ export function MainApp({ user, onSignOut }) {
                                 value={section.name}
                                 onClick={e => e.stopPropagation()}
                                 onChange={e =>
-                                  setPages(
-                                    pages.map(p =>
+                                  mutateOwnedPages(prev =>
+                                    prev.map(p =>
                                       p.id === page.id
                                         ? {
                                             ...p,
@@ -2258,6 +2311,33 @@ export function MainApp({ user, onSignOut }) {
               <AlignJustify size={12} />
               {compactMode ? 'COMPACT' : 'COMPACT'}
             </button>
+            <button
+              onClick={() => {
+                const activeIds = filteredNotes.filter(n => !n.completed).map(n => n.id);
+                if (activeIds.length === 0) return;
+                setNotes(notes.map(n =>
+                  activeIds.includes(n.id)
+                    ? { ...n, completed: true, completed_by_user_id: user.id, completed_at: new Date().toISOString() }
+                    : n
+                ));
+              }}
+              title="Mark all visible notes as completed"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 12px',
+                background: 'transparent',
+                border: `1px solid ${colors.border}`,
+                color: colors.textMuted,
+                fontSize: 12,
+                cursor: 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              <CheckCheck size={12} />
+              ALL
+            </button>
             <div style={{ display: 'flex', border: `1px solid ${colors.border}` }}>
               {[
                 { m: 'list', I: List },
@@ -2427,8 +2507,8 @@ export function MainApp({ user, onSignOut }) {
                           : 'Star page',
                         icon: Star,
                         action: () =>
-                          setPages(
-                            pages.map(p =>
+                          mutateOwnedPages(prev =>
+                            prev.map(p =>
                               p.id === currentPage
                                 ? { ...p, starred: !p.starred }
                                 : p
@@ -2472,8 +2552,8 @@ export function MainApp({ user, onSignOut }) {
                   label: currentPageData?.starred ? 'Unstar page' : 'Star page',
                   icon: Star,
                   action: () => {
-                    setPages(
-                      pages.map(p =>
+                    mutateOwnedPages(prev =>
+                      prev.map(p =>
                         p.id === currentPage
                           ? { ...p, starred: !p.starred }
                           : p
@@ -2488,6 +2568,25 @@ export function MainApp({ user, onSignOut }) {
 
           {/* Content area */}
           <div
+            onTouchStart={isMobile ? (e) => {
+              const x = e.touches[0].clientX;
+              if (x > window.innerWidth * 0.7) {
+                touchStartX.current = x;
+                touchStartY.current = e.touches[0].clientY;
+              }
+            } : undefined}
+            onTouchEnd={isMobile ? (e) => {
+              if (touchStartX.current === null) return;
+              const dx = e.changedTouches[0].clientX - touchStartX.current;
+              const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
+              touchStartX.current = null;
+              touchStartY.current = null;
+              if (dx < -60 && dy < 80) {
+                const modes = ['list', 'boxes', 'calendar'];
+                const i = modes.indexOf(viewMode);
+                setViewMode(modes[(i + 1) % modes.length]);
+              }
+            } : undefined}
             style={{
               flex: 1,
               overflow: 'auto',
@@ -2534,6 +2633,11 @@ export function MainApp({ user, onSignOut }) {
                             canDelete={true}
                             canToggle={true}
                             compact={compactMode}
+                            onTagAdd={(id, tag) =>
+                              setNotes(notes.map(n =>
+                                n.id === id ? { ...n, tags: [...(n.tags || []), tag] } : n
+                              ))
+                            }
                             onToggle={id =>
                               setNotes(
                                 notes.map(n =>
@@ -2709,6 +2813,11 @@ export function MainApp({ user, onSignOut }) {
                               canDelete={canDeleteNote}
                               canToggle={canToggleNote}
                               compact={compactMode}
+                              onTagAdd={(id, tag) =>
+                                setNotes(notes.map(n =>
+                                  n.id === id ? { ...n, tags: [...(n.tags || []), tag] } : n
+                                ))
+                              }
                               onToggle={id =>
                                 setNotes(
                                   notes.map(n =>
@@ -2740,49 +2849,90 @@ export function MainApp({ user, onSignOut }) {
                     );
                   })
                 : filteredNotes.length ? (
-                    filteredNotes.map(note => {
-                      const isOwnNote = note.created_by_user_id === user.id;
-                      const canEditNote = ['owner', 'team-admin'].includes(myRole) || (myRole === 'team' && isOwnNote);
-                      const canDeleteNote = ['owner', 'team-admin'].includes(myRole) || (myRole === 'team' && isOwnNote);
-                      const canToggleNote = ['owner', 'team-admin', 'team', 'team-limited'].includes(myRole);
-
+                    (() => {
+                      const activeNotes = filteredNotes.filter(n => !n.completed);
+                      const completedNotes = filteredNotes.filter(n => n.completed);
+                      const renderNote = (note) => {
+                        const isOwnNote = note.created_by_user_id === user.id;
+                        const canEditNote = ['owner', 'team-admin'].includes(myRole) || (myRole === 'team' && isOwnNote);
+                        const canDeleteNote = ['owner', 'team-admin'].includes(myRole) || (myRole === 'team' && isOwnNote);
+                        const canToggleNote = ['owner', 'team-admin', 'team', 'team-limited'].includes(myRole);
+                        return (
+                          <NoteCard
+                            key={note.id}
+                            note={note}
+                            isNew={note.id === newNoteId}
+                            currentUserId={user.id}
+                            canEdit={canEditNote}
+                            canDelete={canDeleteNote}
+                            canToggle={canToggleNote}
+                            compact={compactMode}
+                            onTagAdd={(id, tag) =>
+                              setNotes(notes.map(n =>
+                                n.id === id ? { ...n, tags: [...(n.tags || []), tag] } : n
+                              ))
+                            }
+                            onToggle={id =>
+                              setNotes(
+                                notes.map(n =>
+                                  n.id === id
+                                    ? {
+                                        ...n,
+                                        completed: !n.completed,
+                                        completed_by_user_id: !n.completed ? user.id : null,
+                                        completed_at: !n.completed ? new Date().toISOString() : null,
+                                      }
+                                    : n
+                                )
+                              )
+                            }
+                            onEdit={(id, c) =>
+                              setNotes(
+                                notes.map(n =>
+                                  n.id === id ? { ...n, content: c } : n
+                                )
+                              )
+                            }
+                            onDelete={id =>
+                              setNotes(notes.filter(n => n.id !== id))
+                            }
+                          />
+                        );
+                      };
                       return (
-                        <NoteCard
-                          key={note.id}
-                          note={note}
-                          isNew={note.id === newNoteId}
-                          currentUserId={user.id}
-                          canEdit={canEditNote}
-                          canDelete={canDeleteNote}
-                          canToggle={canToggleNote}
-                          compact={compactMode}
-                          onToggle={id =>
-                            setNotes(
-                              notes.map(n =>
-                                n.id === id
-                                  ? {
-                                      ...n,
-                                      completed: !n.completed,
-                                      completed_by_user_id: !n.completed ? user.id : null,
-                                      completed_at: !n.completed ? new Date().toISOString() : null,
-                                    }
-                                  : n
-                              )
-                            )
-                          }
-                          onEdit={(id, c) =>
-                            setNotes(
-                              notes.map(n =>
-                                n.id === id ? { ...n, content: c } : n
-                              )
-                            )
-                          }
-                          onDelete={id =>
-                            setNotes(notes.filter(n => n.id !== id))
-                          }
-                        />
+                        <>
+                          {activeNotes.map(renderNote)}
+                          {completedNotes.length > 0 && (
+                            <>
+                              <div
+                                onClick={() => setCompletedExpanded(!completedExpanded)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 8,
+                                  padding: '12px 0',
+                                  cursor: 'pointer',
+                                  userSelect: 'none',
+                                }}
+                              >
+                                <div style={{ flex: 1, height: 1, background: colors.border }} />
+                                <span style={{
+                                  color: colors.textMuted,
+                                  fontSize: 11,
+                                  fontFamily: "'Manrope', sans-serif",
+                                  fontWeight: 500,
+                                  whiteSpace: 'nowrap',
+                                }}>
+                                  {completedExpanded ? '▾' : '▸'} {completedNotes.length} completed
+                                </span>
+                                <div style={{ flex: 1, height: 1, background: colors.border }} />
+                              </div>
+                              {completedExpanded && completedNotes.map(renderNote)}
+                            </>
+                          )}
+                        </>
                       );
-                    })
+                    })()
                   ) : (
                     <p
                       style={{
@@ -2896,6 +3046,7 @@ export function MainApp({ user, onSignOut }) {
           sidebarWidth={isMobile ? 0 : (sidebarOpen ? 240 : 0)}
           isMobile={isMobile}
           isOnline={isOnline}
+          pages={allPages}
         />
       )}
 
@@ -3250,7 +3401,7 @@ export function MainApp({ user, onSignOut }) {
                     starred: false,
                     sections: [],
                   };
-                  setPages([...pages, np]);
+                  mutateOwnedPages(prev => [...prev, np]);
                   setExpandedPages([...expandedPages, np.id]);
                   setCurrentPage(np.id);
                   setViewingPageLevel(true);
@@ -3264,8 +3415,9 @@ export function MainApp({ user, onSignOut }) {
                 const name = prompt('Section name:');
                 if (name && currentPage) {
                   const ns = { id: generateId(), name };
-                  setPages(
-                    pages.map(p =>
+                  const currentPageSections = currentPageData?.sections?.length || 0;
+                  mutateOwnedPages(prev =>
+                    prev.map(p =>
                       p.id === currentPage
                         ? { ...p, sections: [...p.sections, ns] }
                         : p
@@ -3273,6 +3425,13 @@ export function MainApp({ user, onSignOut }) {
                   );
                   setCurrentSection(ns.id);
                   setViewingPageLevel(false);
+                  supabase.from('sections').upsert({
+                    id: ns.id,
+                    page_id: currentPage,
+                    name: ns.name,
+                    position: currentPageSections,
+                  }, { onConflict: 'id' })
+                    .then(({ error }) => { if (error) console.error('Section create persist failed:', error); });
                 }
               },
             },
@@ -3307,8 +3466,8 @@ export function MainApp({ user, onSignOut }) {
                   label: page.starred ? 'Unstar' : 'Star',
                   icon: Star,
                   action: () =>
-                    setPages(
-                      pages.map(p =>
+                    mutateOwnedPages(prev =>
+                      prev.map(p =>
                         p.id === page.id ? { ...p, starred: !p.starred } : p
                       )
                     ),
@@ -3318,20 +3477,29 @@ export function MainApp({ user, onSignOut }) {
                   icon: FolderPlus,
                   action: () => {
                     const name = prompt('Section name:');
-                    if (name)
-                      setPages(
-                        pages.map(p =>
+                    if (name) {
+                      const newSection = { id: generateId(), name };
+                      mutateOwnedPages(prev =>
+                        prev.map(p =>
                           p.id === page.id
                             ? {
                                 ...p,
                                 sections: [
                                   ...p.sections,
-                                  { id: generateId(), name },
+                                  newSection,
                                 ],
                               }
                             : p
                         )
                       );
+                      supabase.from('sections').upsert({
+                        id: newSection.id,
+                        page_id: page.id,
+                        name: newSection.name,
+                        position: page.sections.length,
+                      }, { onConflict: 'id' })
+                        .then(({ error }) => { if (error) console.error('Section create persist failed:', error); });
+                    }
                   },
                   visible: ['owner', 'team-admin', 'team'].includes(pageRoles[page.id]),
                 },
@@ -3359,8 +3527,7 @@ export function MainApp({ user, onSignOut }) {
                     if (confirm(`Delete "${page.name}"?`)) {
                       const sids = page.sections.map(s => s.id);
                       setNotes(notes.filter(n => !sids.includes(n.sectionId)));
-                      setPages(pages.filter(p => p.id !== page.id));
-                      setOwnedPages(ownedPages.filter(p => p.id !== page.id));
+                      mutateOwnedPages(prev => prev.filter(p => p.id !== page.id));
                       if (currentPage === page.id && allPages.length > 1) {
                         const rem = allPages.filter(p => p.id !== page.id);
                         setCurrentPage(rem[0].id);
@@ -3406,8 +3573,8 @@ export function MainApp({ user, onSignOut }) {
                           sectionId: ns.id,
                           createdAt: Date.now(),
                         }));
-                      setPages(
-                        pages.map(p =>
+                      mutateOwnedPages(prev =>
+                        prev.map(p =>
                           p.id === page.id
                             ? { ...p, sections: [...p.sections, ns] }
                             : p
@@ -3434,8 +3601,8 @@ export function MainApp({ user, onSignOut }) {
                         setNotes(
                           notes.filter(n => n.sectionId !== section.id)
                         );
-                        setPages(
-                          pages.map(p =>
+                        mutateOwnedPages(prev =>
+                          prev.map(p =>
                             p.id === page.id
                               ? {
                                   ...p,

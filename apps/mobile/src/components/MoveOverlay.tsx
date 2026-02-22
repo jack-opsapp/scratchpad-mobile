@@ -11,7 +11,8 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
-import { colors, theme } from '../styles';
+import { colors as staticColors, theme } from '../styles';
+import { useTheme } from '../contexts/ThemeContext';
 import type { PageWithSections } from '@slate/shared';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -44,6 +45,7 @@ export default function MoveOverlay({
   noteContent,
   onTargetsReady,
 }: MoveOverlayProps) {
+  const colors = useTheme();
   const translateX = useSharedValue(SCREEN_WIDTH);
   const overlayOpacity = useSharedValue(0);
   const targetsRef = useRef<DropTarget[]>([]);
@@ -156,19 +158,19 @@ export default function MoveOverlay({
                   ref={setSectionRef(section.id, page.name, section.name)}
                   style={[
                     styles.sectionTarget,
-                    isHovered(section.id) && styles.sectionTargetHovered,
+                    isHovered(section.id) && { borderColor: colors.primary, backgroundColor: 'rgba(209, 177, 143, 0.1)' },
                   ]}
                 >
                   <View
                     style={[
                       styles.sectionDot,
-                      isHovered(section.id) && styles.sectionDotHovered,
+                      isHovered(section.id) && { backgroundColor: colors.primary },
                     ]}
                   />
                   <Text
                     style={[
                       styles.sectionName,
-                      isHovered(section.id) && styles.sectionNameHovered,
+                      isHovered(section.id) && { color: colors.primary },
                     ]}
                     numberOfLines={1}
                   >
@@ -192,14 +194,14 @@ const styles = StyleSheet.create({
   floatingNote: {
     position: 'absolute',
     width: 200,
-    backgroundColor: colors.surface,
+    backgroundColor: staticColors.surface,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: staticColors.primary,
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 14,
     zIndex: 10,
-    shadowColor: colors.primary,
+    shadowColor: staticColors.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -208,28 +210,28 @@ const styles = StyleSheet.create({
   floatingNoteText: {
     fontFamily: theme.fonts.regular,
     fontSize: 13,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   panel: {
     position: 'absolute',
     top: 0,
     bottom: 0,
     width: PANEL_WIDTH,
-    backgroundColor: colors.surface,
+    backgroundColor: staticColors.surface,
     borderLeftWidth: 1,
-    borderLeftColor: colors.border,
+    borderLeftColor: staticColors.border,
   },
   panelHeader: {
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   panelTitle: {
     fontFamily: theme.fonts.semibold,
     fontSize: 11,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 1.5,
   },
   scrollArea: {
@@ -245,7 +247,7 @@ const styles = StyleSheet.create({
   pageName: {
     fontFamily: theme.fonts.semibold,
     fontSize: 14,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     marginBottom: 8,
     paddingHorizontal: 4,
   },
@@ -260,26 +262,16 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     marginBottom: 2,
   },
-  sectionTargetHovered: {
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(209, 177, 143, 0.1)',
-  },
   sectionDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: colors.border,
-  },
-  sectionDotHovered: {
-    backgroundColor: colors.primary,
+    backgroundColor: staticColors.border,
   },
   sectionName: {
     fontFamily: theme.fonts.regular,
     fontSize: 14,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     flex: 1,
-  },
-  sectionNameHovered: {
-    color: colors.primary,
   },
 });

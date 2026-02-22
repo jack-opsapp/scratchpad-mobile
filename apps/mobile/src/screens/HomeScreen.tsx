@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronRight, Star } from 'lucide-react-native';
 import { useDataStore } from '../stores/dataStore';
-import { colors, theme } from '../styles';
+import { colors as staticColors, theme } from '../styles';
 import type { PageWithSections } from '@slate/shared';
 import type { RootStackScreenProps } from '../navigation/types';
 
@@ -60,7 +60,7 @@ export default function HomeScreen() {
             {page.sections.length} sections · {noteCount} notes
           </Text>
         </View>
-        <ChevronRight size={16} color={colors.textMuted} />
+        <ChevronRight size={16} color={staticColors.textMuted} />
       </TouchableOpacity>
     );
   };
@@ -77,7 +77,7 @@ export default function HomeScreen() {
   if (loading && pages.length === 0) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="small" color={colors.textMuted} />
+        <ActivityIndicator size="small" color={staticColors.textMuted} />
       </View>
     );
   }
@@ -104,7 +104,7 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={loading}
             onRefresh={refreshData}
-            tintColor={colors.textMuted}
+            tintColor={staticColors.textMuted}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -116,35 +116,35 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: staticColors.bg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.bg,
+    backgroundColor: staticColors.bg,
   },
   header: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   headerTitle: {
     fontSize: theme.fontSize.xs,
     fontWeight: theme.fontWeight.medium,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
   errorBanner: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.danger,
+    borderBottomColor: staticColors.danger,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
   },
   errorText: {
-    color: colors.danger,
+    color: staticColors.danger,
     fontSize: theme.fontSize.sm,
   },
   list: {
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   pageInfo: {
     flex: 1,
@@ -173,11 +173,11 @@ const styles = StyleSheet.create({
   pageName: {
     fontSize: theme.fontSize.lg,
     fontWeight: theme.fontWeight.normal,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   pageStats: {
     fontSize: theme.fontSize.sm,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     marginTop: theme.spacing.xs,
   },
   emptyContainer: {
@@ -189,12 +189,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: theme.fontSize.lg,
     fontWeight: theme.fontWeight.normal,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   emptySubtitle: {
     fontSize: theme.fontSize.md,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     textAlign: 'center',
   },
 });

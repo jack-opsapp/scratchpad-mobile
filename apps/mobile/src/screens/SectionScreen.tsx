@@ -10,7 +10,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, Square, CheckSquare } from 'lucide-react-native';
 import { useDataStore } from '../stores/dataStore';
-import { colors, theme } from '../styles';
+import { colors as staticColors, theme } from '../styles';
+import { useTheme } from '../contexts/ThemeContext';
 import type { RootStackScreenProps } from '../navigation/types';
 import type { Note } from '@slate/shared';
 
@@ -19,6 +20,7 @@ type Props = RootStackScreenProps<'Section'>;
 export default function SectionScreen({ route }: Props) {
   const { sectionId, sectionName } = route.params;
   const navigation = useNavigation();
+  const colors = useTheme();
   const { getNotesForSection } = useDataStore();
 
   const notes = getNotesForSection(sectionId);
@@ -32,7 +34,7 @@ export default function SectionScreen({ route }: Props) {
           {isCompleted ? (
             <CheckSquare size={20} color={colors.primary} />
           ) : (
-            <Square size={20} color={colors.border} />
+            <Square size={20} color={staticColors.border} />
           )}
         </View>
         <View style={styles.noteContent}>
@@ -68,7 +70,7 @@ export default function SectionScreen({ route }: Props) {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <ChevronLeft size={20} color={colors.textMuted} />
+          <ChevronLeft size={20} color={staticColors.textMuted} />
           <Text style={styles.backText}>BACK</Text>
         </TouchableOpacity>
       </View>
@@ -97,13 +99,13 @@ export default function SectionScreen({ route }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: staticColors.bg,
   },
   header: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   backButton: {
     flexDirection: 'row',
@@ -112,7 +114,7 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: theme.fontSize.xs,
     fontWeight: theme.fontWeight.medium,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 1.5,
     marginLeft: theme.spacing.xs,
   },
@@ -120,17 +122,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   sectionTitle: {
     fontSize: theme.fontSize.xl,
     fontWeight: theme.fontWeight.medium,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
   noteCount: {
     fontSize: theme.fontSize.sm,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   list: {
     paddingHorizontal: theme.spacing.md,
@@ -143,7 +145,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   checkbox: {
     marginRight: theme.spacing.sm,
@@ -154,16 +156,16 @@ const styles = StyleSheet.create({
   },
   noteText: {
     fontSize: theme.fontSize.base,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     lineHeight: 20,
   },
   noteTextCompleted: {
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     textDecorationLine: 'line-through',
   },
   noteMeta: {
     fontSize: theme.fontSize.sm,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     marginTop: theme.spacing.xs,
   },
   emptyContainer: {
@@ -175,12 +177,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: theme.fontSize.lg,
     fontWeight: theme.fontWeight.normal,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   emptySubtitle: {
     fontSize: theme.fontSize.md,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     textAlign: 'center',
   },
 });

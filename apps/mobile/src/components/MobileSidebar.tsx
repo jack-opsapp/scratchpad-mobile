@@ -18,8 +18,9 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { X, ChevronDown, ChevronRight, Star, Settings, Users } from 'lucide-react-native';
-import { colors, theme } from '../styles';
+import { X, ChevronDown, ChevronRight, Star, Settings, Users, Home } from 'lucide-react-native';
+import { colors as staticColors, theme } from '../styles';
+import { useTheme } from '../contexts/ThemeContext';
 import { useDataStore } from '../stores/dataStore';
 import { useAuthStore } from '../stores/authStore';
 import type { PageWithSections } from '@slate/shared';
@@ -30,9 +31,9 @@ const SWIPE_THRESHOLD = 50;
 interface MobileSidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  onNavigate: (pageId: string, sectionId: string | null) => void;
+  onNavigate: (pageId: string | null, sectionId: string | null) => void;
   onSettingsPress?: () => void;
-  currentPageId?: string;
+  currentPageId?: string | null;
   currentSectionId?: string | null;
 }
 
@@ -45,6 +46,7 @@ export default function MobileSidebar({
   currentSectionId,
 }: MobileSidebarProps) {
   const insets = useSafeAreaInsets();
+  const colors = useTheme();
   const { pages, sharedPages, tags } = useDataStore();
   const { user } = useAuthStore();
 
@@ -108,7 +110,7 @@ export default function MobileSidebar({
     });
   };
 
-  const handleNavigate = (pageId: string, sectionId: string | null) => {
+  const handleNavigate = (pageId: string | null, sectionId: string | null) => {
     onNavigate(pageId, sectionId);
     onClose();
   };
@@ -127,7 +129,7 @@ export default function MobileSidebar({
   }
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents={isOpen ? 'auto' : 'none'}>
+    <View style={[StyleSheet.absoluteFill, { zIndex: 1000 }]} pointerEvents={isOpen ? 'auto' : 'none'}>
       {/* Overlay */}
       <Animated.View style={[styles.overlay, overlayStyle]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
@@ -144,13 +146,13 @@ export default function MobileSidebar({
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.logo}>Slate</Text>
+            <Text style={[styles.logo, { color: '#ffffff' }]}>SLATE</Text>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={onClose}
               activeOpacity={0.7}
             >
-              <X size={24} color={colors.textMuted} />
+              <X size={24} color={staticColors.textMuted} />
             </TouchableOpacity>
           </View>
 
@@ -160,6 +162,23 @@ export default function MobileSidebar({
             contentContainerStyle={styles.scrollContainer}
             showsVerticalScrollIndicator={false}
           >
+            {/* Home */}
+            <View style={styles.section}>
+              <TouchableOpacity
+                style={[
+                  styles.pageItem,
+                  !currentPageId && styles.pageItemActive,
+                ]}
+                onPress={() => handleNavigate(null, null)}
+                activeOpacity={0.7}
+              >
+                <Home size={18} color={!currentPageId ? staticColors.textPrimary : staticColors.textMuted} />
+                <Text style={[styles.pageName, !currentPageId && { color: staticColors.textPrimary }]}>
+                  HOME
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             {/* My Pages */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>MY PAGES</Text>
@@ -186,9 +205,9 @@ export default function MobileSidebar({
                     >
                       {hasSections ? (
                         isExpanded ? (
-                          <ChevronDown size={18} color={colors.textMuted} />
+                          <ChevronDown size={18} color={staticColors.textMuted} />
                         ) : (
-                          <ChevronRight size={18} color={colors.textMuted} />
+                          <ChevronRight size={18} color={staticColors.textMuted} />
                         )
                       ) : (
                         <View style={{ width: 18 }} />
@@ -251,7 +270,7 @@ export default function MobileSidebar({
             {sharedPages.length > 0 && (
               <View style={styles.section}>
                 <View style={styles.sharedLabelRow}>
-                  <Users size={14} color={colors.textMuted} />
+                  <Users size={14} color={staticColors.textMuted} />
                   <Text style={[styles.sectionLabel, { marginBottom: 0 }]}>SHARED WITH ME</Text>
                 </View>
                 {sharedPages.map((page) => {
@@ -278,9 +297,9 @@ export default function MobileSidebar({
                       >
                         {hasSections ? (
                           isExpanded ? (
-                            <ChevronDown size={18} color={colors.textMuted} />
+                            <ChevronDown size={18} color={staticColors.textMuted} />
                           ) : (
-                            <ChevronRight size={18} color={colors.textMuted} />
+                            <ChevronRight size={18} color={staticColors.textMuted} />
                           )
                         ) : (
                           <View style={{ width: 18 }} />
@@ -289,7 +308,7 @@ export default function MobileSidebar({
                           {page.name.toUpperCase()}
                         </Text>
                         {isPending && (
-                          <View style={styles.newBadge}>
+                          <View style={[styles.newBadge, { backgroundColor: colors.primary }]}>
                             <Text style={styles.newBadgeText}>NEW</Text>
                           </View>
                         )}
@@ -365,7 +384,7 @@ export default function MobileSidebar({
               onPress={onSettingsPress}
               activeOpacity={0.7}
             >
-              <Settings size={18} color={colors.textMuted} />
+              <Settings size={18} color={staticColors.textMuted} />
               <Text style={styles.settingsText}>SETTINGS</Text>
             </TouchableOpacity>
 
@@ -376,7 +395,7 @@ export default function MobileSidebar({
                 onPress={onSettingsPress}
                 activeOpacity={0.7}
               >
-                <View style={styles.avatar}>
+                <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
                   <Text style={styles.avatarText}>{getUserInitials()}</Text>
                 </View>
                 <View style={styles.userInfo}>
@@ -409,7 +428,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: SCREEN_WIDTH,
-    backgroundColor: colors.bg,
+    backgroundColor: staticColors.bg,
     flexDirection: 'column',
   },
   header: {
@@ -419,12 +438,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   logo: {
     fontFamily: theme.fonts.semibold,
     fontSize: 18,
-    color: colors.primary,
     letterSpacing: -0.5,
   },
   closeButton: {
@@ -446,7 +464,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontFamily: theme.fonts.semibold,
     fontSize: 11,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
     marginBottom: 12,
@@ -458,7 +476,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   newBadge: {
-    backgroundColor: colors.primary,
     paddingVertical: 2,
     paddingHorizontal: 6,
     borderRadius: 4,
@@ -466,7 +483,7 @@ const styles = StyleSheet.create({
   newBadgeText: {
     fontFamily: theme.fonts.semibold,
     fontSize: 9,
-    color: colors.bg,
+    color: staticColors.bg,
     letterSpacing: 0.5,
   },
   pageContainer: {
@@ -481,18 +498,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   pageItemActive: {
-    backgroundColor: colors.surface,
+    backgroundColor: staticColors.surface,
   },
   pageName: {
     fontFamily: theme.fonts.regular,
     fontSize: 16,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     flex: 1,
   },
   sectionsContainer: {
     marginLeft: 30,
     borderLeftWidth: 1,
-    borderLeftColor: colors.border,
+    borderLeftColor: staticColors.border,
     paddingLeft: 12,
     marginTop: 4,
   },
@@ -502,15 +519,15 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   sectionItemActive: {
-    backgroundColor: colors.surface,
+    backgroundColor: staticColors.surface,
   },
   sectionName: {
     fontFamily: theme.fonts.regular,
     fontSize: 14,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   sectionNameActive: {
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   tagsContainer: {
     flexDirection: 'row',
@@ -519,7 +536,7 @@ const styles = StyleSheet.create({
   },
   tagPill: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 4,
@@ -527,11 +544,11 @@ const styles = StyleSheet.create({
   tagPillText: {
     fontFamily: theme.fonts.regular,
     fontSize: 12,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   footer: {
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
     paddingHorizontal: 20,
     paddingTop: 16,
   },
@@ -543,12 +560,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   settingsText: {
     fontFamily: theme.fonts.semibold,
     fontSize: 11,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 1.5,
   },
   userRow: {
@@ -560,14 +577,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
     fontFamily: theme.fonts.semibold,
     fontSize: 14,
-    color: colors.bg,
+    color: staticColors.bg,
   },
   userInfo: {
     flex: 1,
@@ -575,12 +591,12 @@ const styles = StyleSheet.create({
   userName: {
     fontFamily: theme.fonts.medium,
     fontSize: 14,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   userEmail: {
     fontFamily: theme.fonts.regular,
     fontSize: 12,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     marginTop: 2,
   },
 });

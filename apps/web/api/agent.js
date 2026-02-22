@@ -131,6 +131,10 @@ NOTE CREATION:
 - Always call navigate(page_name, section_name) so user can click to go there
 - Example: create_note(...) → navigate(page_name: "Work", section_name: "Tasks") → respond_to_user("Got it. See Work/Tasks.")
 
+NOTE COMPLETENESS CHECK:
+Before creating a note, check if input appears truncated (ends mid-sentence, mid-word, with " -", or lacks punctuation after 3+ words). If so, call ask_clarification: "It looks like your note may have been cut off. Should I add it as-is, or did you want to send more?"
+Do NOT ask for short notes (<6 words) or naturally ending notes.
+
 AUTO-TAGGING (IMPORTANT):
 - ALWAYS auto-tag notes when creating them - never leave notes untagged
 - Before creating a note, call get_notes(limit: 100) to see existing tags in use
@@ -217,6 +221,7 @@ export default async function handler(req, res) {
 
     // Fetch user's AI response style preference and mem0 profile in parallel
     let responseStyle = 'tactical'; // Default
+    let projectContext = '';
     let mem0Profile = null;
 
     const fetchPromises = [];
@@ -228,12 +233,15 @@ export default async function handler(req, res) {
           const supabase = createClient(supabaseUrl, supabaseServiceKey);
           const { data: settings } = await supabase
             .from('user_settings')
-            .select('ai_response_style')
+            .select('ai_response_style, project_context')
             .eq('user_id', userId)
             .single();
 
           if (settings?.ai_response_style) {
             responseStyle = settings.ai_response_style;
+          }
+          if (settings?.project_context) {
+            projectContext = settings.project_context.substring(0, 2000);
           }
         } catch (e) {
           console.log('Could not fetch user settings, using default style:', e.message);
@@ -261,7 +269,10 @@ export default async function handler(req, res) {
     // Build personality-aware system prompt with mem0 context
     const personalityPrompt = PERSONALITY_PROMPTS[responseStyle] || PERSONALITY_PROMPTS.tactical;
     const mem0Context = buildMem0Context(mem0Profile);
-    const fullSystemPrompt = `${personalityPrompt}\n\n${SYSTEM_PROMPT}${mem0Context}`;
+    const projectContextBlock = projectContext
+      ? `\n\nPROJECT CONTEXT (provided by user):\n${projectContext}`
+      : '';
+    const fullSystemPrompt = `${personalityPrompt}\n\n${SYSTEM_PROMPT}${mem0Context}${projectContextBlock}`;
 
     // Build context string for the agent using shared helper
     const contextInfo = buildContextString(context?.currentPage, context?.currentSection);

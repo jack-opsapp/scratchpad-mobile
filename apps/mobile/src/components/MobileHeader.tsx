@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
   interpolate,
 } from 'react-native-reanimated';
-import { colors, theme } from '../styles';
+import { colors as staticColors, theme } from '../styles';
 
 interface MobileHeaderProps {
   currentPage?: string;
@@ -72,7 +72,7 @@ export default function MobileHeader({
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor={colors.surface} />
+      <StatusBar barStyle="light-content" backgroundColor={staticColors.surface} />
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.content}>
           {/* Left button - Animated Hamburger/X or Back */}
@@ -82,7 +82,7 @@ export default function MobileHeader({
               onPress={onBackPress}
               activeOpacity={0.7}
             >
-              <ChevronLeft size={24} color={colors.textMuted} />
+              <ChevronLeft size={24} color={staticColors.textMuted} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -120,7 +120,7 @@ export default function MobileHeader({
               onPress={onCloseAgentView}
               activeOpacity={0.7}
             >
-              <X size={18} color={colors.textMuted} />
+              <X size={18} color={staticColors.textMuted} />
             </TouchableOpacity>
           ) : !agentViewTitle ? (
             <TouchableOpacity
@@ -128,7 +128,7 @@ export default function MobileHeader({
               onPress={onMorePress}
               activeOpacity={0.7}
             >
-              <MoreVertical size={20} color={colors.textMuted} />
+              <MoreVertical size={20} color={staticColors.textMuted} />
             </TouchableOpacity>
           ) : (
             <View style={styles.button} />
@@ -141,9 +141,9 @@ export default function MobileHeader({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.surface,
+    backgroundColor: staticColors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
     zIndex: 100,
   },
   content: {
@@ -166,11 +166,11 @@ const styles = StyleSheet.create({
   breadcrumbText: {
     fontFamily: theme.fonts.semibold,
     fontSize: 15,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   breadcrumbMuted: {
     fontFamily: theme.fonts.regular,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     fontWeight: '400',
   },
   hamburgerContainer: {
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   hamburgerBar: {
     width: 18,
     height: 2,
-    backgroundColor: colors.textMuted,
+    backgroundColor: staticColors.textMuted,
     borderRadius: 1,
   },
 });

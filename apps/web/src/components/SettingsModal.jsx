@@ -52,7 +52,8 @@ const TABS = [
   { id: 'ai', label: 'AI Behavior' },
   { id: 'content', label: 'Content' },
   { id: 'data', label: 'Data & Privacy' },
-  { id: 'account', label: 'Account' }
+  { id: 'account', label: 'Account' },
+  { id: 'developer', label: 'Developer' }
 ];
 
 // =============================================================================
@@ -233,6 +234,9 @@ export default function SettingsModal({ isOpen, onClose, pages = [], user }) {
             )}
             {activeTab === 'account' && (
               <AccountTab user={user} />
+            )}
+            {activeTab === 'developer' && (
+              <DeveloperTab settings={localSettings} onChange={handleChange} user={user} />
             )}
           </div>
         </div>
@@ -786,6 +790,34 @@ function AIBehaviorTab({ settings, onChange }) {
           value={settings.confirmationLevel}
           onChange={(confirmationLevel) => onChange({ confirmationLevel })}
         />
+      </SettingGroup>
+
+      {/* Project Context */}
+      <SettingGroup
+        label="PROJECT CONTEXT"
+        description="Provide context about your project so the agent can categorize and tag notes more accurately"
+      >
+        <textarea
+          value={settings.projectContext || ''}
+          onChange={(e) => onChange({ projectContext: e.target.value })}
+          placeholder="e.g. We're building a mobile app for plumbers. Key areas: scheduling, invoicing, crew management. Common tags: bug, feature, urgent, backend, frontend..."
+          rows={5}
+          style={{
+            width: '100%',
+            background: colors.bg,
+            border: `1px solid ${colors.border}`,
+            color: colors.textPrimary,
+            fontSize: 13,
+            fontFamily: "'Manrope', sans-serif",
+            padding: '12px 16px',
+            resize: 'vertical',
+            outline: 'none',
+            lineHeight: 1.5,
+          }}
+        />
+        <p style={{ color: colors.textMuted, fontSize: 11, marginTop: 6 }}>
+          {(settings.projectContext || '').length} / 2000 characters
+        </p>
       </SettingGroup>
     </div>
   );
@@ -1407,5 +1439,336 @@ function ExportButton({ icon: Icon, label, description, loading, onClick, wide }
         </div>
       </div>
     </button>
+  );
+}
+
+// =============================================================================
+// Developer Tab
+// =============================================================================
+
+function DeveloperTab({ settings, onChange, user }) {
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [keys, setKeys] = useState([]);
+  const [keysLoading, setKeysLoading] = useState(true);
+  const [showKeyForm, setShowKeyForm] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [generatingKey, setGeneratingKey] = useState(false);
+  const [revealedKey, setRevealedKey] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    setKeysLoading(true);
+    supabase
+      .from('api_keys')
+      .select('id, name, created_at, last_used_at, revoked_at')
+      .is('revoked_at', null)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        setKeys(data || []);
+        setKeysLoading(false);
+      });
+  }, [user?.id]);
+
+  const handleGenerateKey = async () => {
+    if (!newKeyName.trim()) return;
+    setGeneratingKey(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Not authenticated');
+
+      const response = await fetch('/api/v1/keys', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ name: newKeyName.trim() })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to generate key');
+
+      setRevealedKey(data.key);
+      setNewKeyName('');
+      setShowKeyForm(false);
+
+      const { data: updated } = await supabase
+        .from('api_keys')
+        .select('id, name, created_at, last_used_at, revoked_at')
+        .is('revoked_at', null)
+        .order('created_at', { ascending: false });
+      setKeys(updated || []);
+    } catch (err) {
+      alert('Failed to generate key: ' + err.message);
+    } finally {
+      setGeneratingKey(false);
+    }
+  };
+
+  const handleRevoke = async (keyId) => {
+    if (!confirm('Revoke this API key? Any tools using it will stop working immediately.')) return;
+    await supabase
+      .from('api_keys')
+      .update({ revoked_at: new Date().toISOString() })
+      .eq('id', keyId);
+    setKeys(prev => prev.filter(k => k.id !== keyId));
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(revealedKey).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const formatDate = (iso) => {
+    if (!iso) return null;
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const formatRelative = (iso) => {
+    if (!iso) return 'Never used';
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return formatDate(iso);
+  };
+
+  return (
+    <div>
+      <h3 style={{ color: colors.textPrimary, fontSize: 16, marginBottom: 20, fontFamily: "'Manrope', sans-serif" }}>
+        Developer
+      </h3>
+
+      {/* Slate API Keys */}
+      <div style={{ marginBottom: 40 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <label style={{ color: colors.textMuted, fontSize: 11, fontWeight: 600, letterSpacing: 0.5 }}>
+            SLATE API KEYS
+          </label>
+          <button
+            onClick={() => { setShowKeyForm(v => !v); setRevealedKey(null); }}
+            style={{
+              padding: '6px 12px',
+              background: 'transparent',
+              border: `1px solid ${colors.border}`,
+              color: colors.textPrimary,
+              fontSize: 12,
+              cursor: 'pointer'
+            }}
+          >
+            + Generate New Key
+          </button>
+        </div>
+        <p style={{ color: colors.textMuted, fontSize: 11, marginBottom: 12, lineHeight: 1.5 }}>
+          Use these keys to access your notes from Claude Code or other tools.
+        </p>
+
+        {showKeyForm && (
+          <div style={{
+            marginBottom: 12,
+            padding: 12,
+            background: colors.bg,
+            border: `1px solid ${colors.border}`,
+            display: 'flex',
+            gap: 8,
+            alignItems: 'center'
+          }}>
+            <input
+              type="text"
+              value={newKeyName}
+              onChange={e => setNewKeyName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleGenerateKey()}
+              placeholder='e.g. "Claude Code - MacBook"'
+              autoFocus
+              style={{
+                flex: 1,
+                padding: '8px 10px',
+                background: colors.surface,
+                border: `1px solid ${colors.border}`,
+                color: colors.textPrimary,
+                fontSize: 13
+              }}
+            />
+            <button
+              onClick={handleGenerateKey}
+              disabled={generatingKey || !newKeyName.trim()}
+              style={{
+                padding: '8px 14px',
+                background: newKeyName.trim() ? colors.primary : colors.border,
+                border: 'none',
+                color: newKeyName.trim() ? colors.bg : colors.textMuted,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: generatingKey || !newKeyName.trim() ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {generatingKey ? 'Generating...' : 'Create'}
+            </button>
+            <button
+              onClick={() => setShowKeyForm(false)}
+              style={{
+                padding: '8px 10px',
+                background: 'transparent',
+                border: `1px solid ${colors.border}`,
+                color: colors.textMuted,
+                fontSize: 13,
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {revealedKey && (
+          <div style={{
+            marginBottom: 12,
+            padding: 14,
+            background: `${colors.success}12`,
+            border: `1px solid ${colors.success}40`
+          }}>
+            <p style={{ color: colors.success, fontSize: 11, fontWeight: 600, marginBottom: 8 }}>
+              ✓ Your new API key — copy it now. It won't be shown again.
+            </p>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <code style={{
+                flex: 1,
+                padding: '8px 10px',
+                background: colors.bg,
+                border: `1px solid ${colors.border}`,
+                color: colors.textPrimary,
+                fontSize: 12,
+                fontFamily: 'monospace',
+                wordBreak: 'break-all'
+              }}>
+                {revealedKey}
+              </code>
+              <button
+                onClick={handleCopy}
+                style={{
+                  padding: '8px 14px',
+                  background: copied ? colors.success : colors.primary,
+                  border: 'none',
+                  color: colors.bg,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  flexShrink: 0
+                }}
+              >
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+              <button
+                onClick={() => setRevealedKey(null)}
+                style={{
+                  padding: '8px 10px',
+                  background: 'transparent',
+                  border: `1px solid ${colors.border}`,
+                  color: colors.textMuted,
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  flexShrink: 0
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
+
+        {keysLoading ? (
+          <p style={{ color: colors.textMuted, fontSize: 12 }}>Loading keys...</p>
+        ) : keys.length === 0 ? (
+          <div style={{
+            padding: 16,
+            border: `1px solid ${colors.border}`,
+            color: colors.textMuted,
+            fontSize: 12,
+            textAlign: 'center'
+          }}>
+            No API keys yet. Generate one above.
+          </div>
+        ) : (
+          <div style={{ border: `1px solid ${colors.border}` }}>
+            {keys.map((key, i) => (
+              <div
+                key={key.id}
+                style={{
+                  padding: '12px 16px',
+                  borderBottom: i < keys.length - 1 ? `1px solid ${colors.border}` : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12
+                }}
+              >
+                <div>
+                  <div style={{ color: colors.textPrimary, fontSize: 13, fontWeight: 500 }}>
+                    {key.name}
+                  </div>
+                  <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>
+                    Created {formatDate(key.created_at)} · {formatRelative(key.last_used_at)}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleRevoke(key.id)}
+                  style={{
+                    padding: '6px 12px',
+                    background: 'transparent',
+                    border: `1px solid ${colors.danger}`,
+                    color: colors.danger,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    flexShrink: 0
+                  }}
+                >
+                  Revoke
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div style={{ borderTop: `1px solid ${colors.border}`, marginBottom: 32 }} />
+
+      {/* OpenAI API Key */}
+      <SettingGroup label="OPENAI API KEY" description="Your personal OpenAI API key (stored securely)">
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            type={showApiKey ? 'text' : 'password'}
+            value={settings.customOpenAIKey || ''}
+            onChange={e => onChange({ customOpenAIKey: e.target.value || null })}
+            placeholder="sk-..."
+            style={{
+              flex: 1,
+              padding: '10px 14px',
+              background: colors.bg,
+              border: `1px solid ${colors.border}`,
+              color: colors.textPrimary,
+              fontSize: 13,
+              fontFamily: 'monospace',
+            }}
+          />
+          <button
+            onClick={() => setShowApiKey(v => !v)}
+            style={{
+              padding: '10px 14px',
+              background: 'transparent',
+              border: `1px solid ${colors.border}`,
+              color: colors.textMuted,
+              cursor: 'pointer',
+            }}
+          >
+            {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </div>
+      </SettingGroup>
+    </div>
   );
 }

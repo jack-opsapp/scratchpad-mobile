@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LogOut, User, Info } from 'lucide-react-native';
 import { useAuthStore } from '../../stores/authStore';
-import { colors, theme } from '../../styles';
+import { colors as staticColors, theme } from '../../styles';
 
 export default function SettingsView() {
   const insets = useSafeAreaInsets();
@@ -22,7 +22,7 @@ export default function SettingsView() {
         <Text style={styles.sectionTitle}>ACCOUNT</Text>
         <View style={styles.card}>
           <View style={styles.cardRow}>
-            <User size={16} color={colors.textMuted} />
+            <User size={16} color={staticColors.textMuted} />
             <View style={styles.cardContent}>
               <Text style={styles.label}>Email</Text>
               <Text style={styles.value}>{user?.email || 'Not signed in'}</Text>
@@ -37,7 +37,7 @@ export default function SettingsView() {
         <View style={styles.card}>
           <View style={styles.infoRow}>
             <View style={styles.infoLeft}>
-              <Info size={16} color={colors.textMuted} />
+              <Info size={16} color={staticColors.textMuted} />
               <Text style={styles.infoLabel}>Version</Text>
             </View>
             <Text style={styles.infoValue}>1.0.0</Text>
@@ -51,7 +51,7 @@ export default function SettingsView() {
         onPress={logout}
         activeOpacity={0.7}
       >
-        <LogOut size={16} color={colors.danger} />
+        <LogOut size={16} color={staticColors.danger} />
         <Text style={styles.signOutText}>SIGN OUT</Text>
       </TouchableOpacity>
 
@@ -77,14 +77,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: theme.fonts.medium,
     fontSize: 11,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 1.5,
     marginBottom: 10,
   },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: staticColors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     padding: 16,
   },
   cardRow: {
@@ -97,13 +97,13 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: theme.fonts.regular,
     fontSize: 12,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     marginBottom: 2,
   },
   value: {
     fontFamily: theme.fonts.regular,
     fontSize: 15,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   infoRow: {
     flexDirection: 'row',
@@ -117,13 +117,13 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontFamily: theme.fonts.regular,
     fontSize: 15,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     marginLeft: 12,
   },
   infoValue: {
     fontFamily: theme.fonts.regular,
     fontSize: 15,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   signOutButton: {
     flexDirection: 'row',
@@ -131,12 +131,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     marginTop: 8,
   },
   signOutText: {
     fontFamily: theme.fonts.medium,
-    color: colors.danger,
+    color: staticColors.danger,
     fontSize: 12,
     letterSpacing: 1.5,
     marginLeft: 10,
@@ -146,18 +146,18 @@ const styles = StyleSheet.create({
     marginTop: 48,
     paddingTop: 24,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
   },
   footerLogo: {
     fontFamily: theme.fonts.semibold,
     fontSize: 16,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 3,
     marginBottom: 6,
   },
   footerTagline: {
     fontFamily: theme.fonts.regular,
     fontSize: 12,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
 });

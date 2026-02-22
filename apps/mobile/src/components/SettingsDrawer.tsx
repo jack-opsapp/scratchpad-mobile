@@ -25,6 +25,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import {
   ChevronLeft,
+  ChevronRight,
   LogOut,
   Info,
   Brain,
@@ -49,6 +50,8 @@ import {
   HardDrive,
   ChevronDown,
   BookOpen,
+  Users,
+  UserCheck,
 } from 'lucide-react-native';
 import { supabase } from '../services/supabase';
 import { API_URL } from '@env';
@@ -57,7 +60,8 @@ const API_BASE = API_URL || 'https://slate.opsapp.co';
 import { useAuthStore } from '../stores/authStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useDataStore } from '../stores/dataStore';
-import { colors, theme } from '../styles';
+import { colors as staticColors, theme } from '../styles';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 50;
@@ -78,6 +82,20 @@ const ACCENT_COLORS: Record<string, { name: string; primary: string }> = {
   sage:       { name: 'Sage',       primary: '#9caf88' },
   olive:      { name: 'Olive',      primary: '#8a9a5b' },
 };
+
+// Compute preview color from mode + brightness + accent hex
+function computePreviewColor(mode: 'accent' | 'grayscale', brightness: number, accentHex: string): string {
+  const b = Math.max(0, Math.min(100, brightness));
+  if (mode === 'grayscale') {
+    const v = Math.round((b / 100) * 255);
+    return `rgb(${v}, ${v}, ${v})`;
+  }
+  const r = parseInt(accentHex.slice(1, 3), 16);
+  const g = parseInt(accentHex.slice(3, 5), 16);
+  const bl = parseInt(accentHex.slice(5, 7), 16);
+  const f = b / 100;
+  return `rgb(${Math.round(r * f)}, ${Math.round(g * f)}, ${Math.round(bl * f)})`;
+}
 
 interface SettingsDrawerProps {
   isOpen: boolean;
@@ -101,7 +119,7 @@ function SegmentedControl<T extends string | number>({
           key={String(opt.value)}
           style={[
             segStyles.segment,
-            value === opt.value && segStyles.segmentActive,
+            value === opt.value && { borderColor: '#ffffff', borderWidth: 1 },
           ]}
           onPress={() => onChange(opt.value)}
           activeOpacity={0.7}
@@ -109,7 +127,7 @@ function SegmentedControl<T extends string | number>({
           <Text
             style={[
               segStyles.segmentText,
-              value === opt.value && segStyles.segmentTextActive,
+              value === opt.value && { fontFamily: theme.fonts.semibold, color: '#ffffff' },
             ]}
           >
             {opt.label}
@@ -158,6 +176,7 @@ function PagePicker({
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 }) {
+  const colors = useTheme();
   const [open, setOpen] = useState(false);
   const selectedName = pages.find(p => p.id === selectedId)?.name || 'None (last viewed)';
 
@@ -169,7 +188,7 @@ function PagePicker({
         activeOpacity={0.7}
       >
         <Text style={pickerStyles.triggerText}>{selectedName}</Text>
-        <ChevronDown size={14} color={colors.textMuted} />
+        <ChevronDown size={14} color={staticColors.textMuted} />
       </TouchableOpacity>
       {open && (
         <View style={pickerStyles.dropdown}>
@@ -178,7 +197,7 @@ function PagePicker({
             onPress={() => { onSelect(null); setOpen(false); }}
             activeOpacity={0.7}
           >
-            <Text style={[pickerStyles.optionText, !selectedId && pickerStyles.optionSelected]}>
+            <Text style={[pickerStyles.optionText, !selectedId && { color: colors.primary }]}>
               None (last viewed)
             </Text>
           </TouchableOpacity>
@@ -189,7 +208,7 @@ function PagePicker({
               onPress={() => { onSelect(page.id); setOpen(false); }}
               activeOpacity={0.7}
             >
-              <Text style={[pickerStyles.optionText, selectedId === page.id && pickerStyles.optionSelected]}>
+              <Text style={[pickerStyles.optionText, selectedId === page.id && { color: colors.primary }]}>
                 {page.name}
               </Text>
             </TouchableOpacity>
@@ -210,6 +229,7 @@ function SectionPicker({
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 }) {
+  const colors = useTheme();
   const [open, setOpen] = useState(false);
   const selectedName = sections.find(s => s.id === selectedId)?.name || 'None (first section)';
 
@@ -221,7 +241,7 @@ function SectionPicker({
         activeOpacity={0.7}
       >
         <Text style={pickerStyles.triggerText}>{selectedName}</Text>
-        <ChevronDown size={14} color={colors.textMuted} />
+        <ChevronDown size={14} color={staticColors.textMuted} />
       </TouchableOpacity>
       {open && (
         <View style={pickerStyles.dropdown}>
@@ -230,7 +250,7 @@ function SectionPicker({
             onPress={() => { onSelect(null); setOpen(false); }}
             activeOpacity={0.7}
           >
-            <Text style={[pickerStyles.optionText, !selectedId && pickerStyles.optionSelected]}>
+            <Text style={[pickerStyles.optionText, !selectedId && { color: colors.primary }]}>
               None (first section)
             </Text>
           </TouchableOpacity>
@@ -241,7 +261,7 @@ function SectionPicker({
               onPress={() => { onSelect(section.id); setOpen(false); }}
               activeOpacity={0.7}
             >
-              <Text style={[pickerStyles.optionText, selectedId === section.id && pickerStyles.optionSelected]}>
+              <Text style={[pickerStyles.optionText, selectedId === section.id && { color: colors.primary }]}>
                 {section.name}
               </Text>
             </TouchableOpacity>
@@ -252,19 +272,101 @@ function SectionPicker({
   );
 }
 
+// Brightness Slider Component
+function BrightnessSlider({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  const colors = useTheme();
+  const SLIDER_WIDTH = Dimensions.get('window').width - 120;
+  const translateX = useSharedValue((value / 100) * SLIDER_WIDTH);
+  const [displayValue, setDisplayValue] = useState(value);
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      const newX = Math.max(0, Math.min(SLIDER_WIDTH, event.translationX + (value / 100) * SLIDER_WIDTH));
+      translateX.value = newX;
+      const newValue = Math.round((newX / SLIDER_WIDTH) * 100);
+      runOnJS(setDisplayValue)(newValue);
+    })
+    .onEnd(() => {
+      const finalValue = Math.round((translateX.value / SLIDER_WIDTH) * 100);
+      runOnJS(onChange)(finalValue);
+    });
+
+  const thumbStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  const fillStyle = useAnimatedStyle(() => ({
+    width: translateX.value,
+  }));
+
+  return (
+    <View style={sliderStyles.container}>
+      <View style={sliderStyles.track}>
+        <Animated.View style={[sliderStyles.fill, { backgroundColor: '#aaaaaa' }, fillStyle]} />
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={[sliderStyles.thumb, thumbStyle]}>
+            <View style={[sliderStyles.thumbInner, { backgroundColor: '#aaaaaa' }]} />
+          </Animated.View>
+        </GestureDetector>
+      </View>
+      <Text style={sliderStyles.valueText}>{displayValue}%</Text>
+    </View>
+  );
+}
+
+type SettingsSection = 'appearance' | 'ai' | 'content' | 'data' | 'developer' | 'app' | null;
+
 export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuthStore();
-  const { settings, fetchSettings, updateSetting } = useSettingsStore();
+  const { settings, fetchSettings, updateSetting, updateSettings } = useSettingsStore();
   const { pages } = useDataStore();
+  const colors = useTheme();
 
   const translateX = useSharedValue(-SCREEN_WIDTH);
   const overlayOpacity = useSharedValue(0);
+  const [currentSection, setCurrentSection] = useState<SettingsSection>(null);
   const [showApiKey, setShowApiKey] = useState(false);
   const [copiedUserId, setCopiedUserId] = useState(false);
   const [clearingMemory, setClearingMemory] = useState(false);
   const [memoryCleared, setMemoryCleared] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
+
+  // Pending changes state
+  const [pendingChanges, setPendingChanges] = useState<Partial<typeof settings>>({});
+  const hasPendingChanges = Object.keys(pendingChanges).length > 0;
+
+  // Merged settings (pending changes override actual settings)
+  const effectiveSettings = { ...settings, ...pendingChanges };
+
+  // Update pending change
+  const setPendingSetting = <K extends keyof typeof settings>(
+    key: K,
+    value: typeof settings[K]
+  ) => {
+    setPendingChanges(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Save all pending changes
+  const handleSaveChanges = async () => {
+    if (Object.keys(pendingChanges).length > 0) {
+      for (const [key, value] of Object.entries(pendingChanges)) {
+        await updateSetting(key as keyof typeof settings, value as any);
+      }
+      setPendingChanges({});
+    }
+  };
+
+  // Revert all pending changes
+  const handleRevertChanges = () => {
+    setPendingChanges({});
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -274,6 +376,11 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
     } else {
       translateX.value = withTiming(-SCREEN_WIDTH, { duration: 300 });
       overlayOpacity.value = withTiming(0, { duration: 300 });
+      // Reset to main menu when closing and clear pending changes
+      setTimeout(() => {
+        setCurrentSection(null);
+        setPendingChanges({});
+      }, 300);
     }
   }, [isOpen, translateX, overlayOpacity]);
 
@@ -532,14 +639,42 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
           <View style={styles.header}>
             <TouchableOpacity
               style={styles.backButton}
-              onPress={onClose}
+              onPress={currentSection ? () => setCurrentSection(null) : onClose}
               activeOpacity={0.7}
             >
-              <ChevronLeft size={22} color={colors.textMuted} />
+              <ChevronLeft size={22} color={staticColors.textMuted} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>SETTINGS</Text>
+            <Text style={styles.headerTitle}>
+              {currentSection === 'appearance' && 'APPEARANCE'}
+              {currentSection === 'ai' && 'AI BEHAVIOR'}
+              {currentSection === 'content' && 'CONTENT'}
+              {currentSection === 'data' && 'DATA & PRIVACY'}
+              {currentSection === 'developer' && 'DEVELOPER'}
+              {currentSection === 'app' && 'APP'}
+              {!currentSection && 'SETTINGS'}
+            </Text>
             <View style={styles.backButton} />
           </View>
+
+          {/* Save/Revert buttons when there are pending changes */}
+          {hasPendingChanges && (
+            <View style={styles.actionButtonsContainer}>
+              <TouchableOpacity
+                style={styles.revertButton}
+                onPress={handleRevertChanges}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.revertButtonText}>REVERT CHANGES</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.saveButton, { backgroundColor: colors.primary }]}
+                onPress={handleSaveChanges}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.saveButtonText}>SAVE CHANGES</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Content */}
           <ScrollView
@@ -555,7 +690,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
               <Text style={styles.sectionLabel}>ACCOUNT</Text>
               <View style={styles.card}>
                 <View style={styles.userRow}>
-                  <View style={styles.avatar}>
+                  <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
                     <Text style={styles.avatarText}>{getUserInitials()}</Text>
                   </View>
                   <View style={styles.userInfo}>
@@ -592,22 +727,158 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                       {user?.id ? `${user.id.slice(0, 8)}...` : '—'}
                     </Text>
                     {copiedUserId ? (
-                      <Check size={14} color={colors.success} />
+                      <Check size={14} color={staticColors.success} />
                     ) : (
-                      <Copy size={14} color={colors.textMuted} />
+                      <Copy size={14} color={staticColors.textMuted} />
                     )}
                   </TouchableOpacity>
                 </View>
               </View>
             </View>
 
+            {/* Main Menu */}
+            {!currentSection && (
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>PREFERENCES</Text>
+                <View style={styles.card}>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => setCurrentSection('appearance')}
+                    activeOpacity={0.7}
+                  >
+                    <Palette size={20} color={staticColors.textMuted} />
+                    <Text style={styles.menuItemText}>Appearance</Text>
+                    <ChevronRight size={18} color={staticColors.textMuted} />
+                  </TouchableOpacity>
+
+                  <View style={styles.divider} />
+
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => setCurrentSection('ai')}
+                    activeOpacity={0.7}
+                  >
+                    <MessageSquare size={20} color={staticColors.textMuted} />
+                    <Text style={styles.menuItemText}>AI Behavior</Text>
+                    <ChevronRight size={18} color={staticColors.textMuted} />
+                  </TouchableOpacity>
+
+                  <View style={styles.divider} />
+
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => setCurrentSection('content')}
+                    activeOpacity={0.7}
+                  >
+                    <FileText size={20} color={staticColors.textMuted} />
+                    <Text style={styles.menuItemText}>Content</Text>
+                    <ChevronRight size={18} color={staticColors.textMuted} />
+                  </TouchableOpacity>
+
+                  <View style={styles.divider} />
+
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => setCurrentSection('data')}
+                    activeOpacity={0.7}
+                  >
+                    <Database size={20} color={staticColors.textMuted} />
+                    <Text style={styles.menuItemText}>Data & Privacy</Text>
+                    <ChevronRight size={18} color={staticColors.textMuted} />
+                  </TouchableOpacity>
+
+                  <View style={styles.divider} />
+
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => setCurrentSection('developer')}
+                    activeOpacity={0.7}
+                  >
+                    <Key size={20} color={staticColors.textMuted} />
+                    <Text style={styles.menuItemText}>Developer</Text>
+                    <ChevronRight size={18} color={staticColors.textMuted} />
+                  </TouchableOpacity>
+
+                  <View style={styles.divider} />
+
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => setCurrentSection('app')}
+                    activeOpacity={0.7}
+                  >
+                    <BookOpen size={20} color={staticColors.textMuted} />
+                    <Text style={styles.menuItemText}>App</Text>
+                    <ChevronRight size={18} color={staticColors.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
             {/* ===== APPEARANCE ===== */}
+            {currentSection === 'appearance' && (
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>APPEARANCE</Text>
+
+              {/* Preview Card */}
+              <View style={styles.previewContainer}>
+                <Text style={styles.previewLabel}>PREVIEW</Text>
+                <View style={[
+                  styles.previewCard,
+                  {
+                    backgroundColor: effectiveSettings.theme === 'dark' ? '#1a1a1a' : '#f5f5f5',
+                    borderColor: effectiveSettings.theme === 'dark' ? '#2a2a2a' : '#e0e0e0',
+                  }
+                ]}>
+                  <View style={styles.previewHeader}>
+                    <View style={[
+                      styles.previewDot,
+                      { backgroundColor: ACCENT_COLORS[effectiveSettings.accent_color]?.primary || colors.primary }
+                    ]} />
+                    <Text style={[
+                      styles.previewTitle,
+                      {
+                        color: effectiveSettings.theme === 'dark' ? '#e8e8e8' : '#1a1a1a',
+                        fontSize: effectiveSettings.font_size === 'small' ? 14 : effectiveSettings.font_size === 'large' ? 18 : 16,
+                      }
+                    ]}>
+                      Sample Note Card
+                    </Text>
+                  </View>
+                  <Text style={[
+                    styles.previewText,
+                    {
+                      color: effectiveSettings.theme === 'dark' ? '#a0a0a0' : '#666666',
+                      fontSize: effectiveSettings.font_size === 'small' ? 12 : effectiveSettings.font_size === 'large' ? 16 : 14,
+                    }
+                  ]}>
+                    This is how your notes will look with the selected theme and accent color.
+                  </Text>
+                  <View style={styles.previewTags}>
+                    <View style={[
+                      styles.previewTag,
+                      {
+                        backgroundColor: effectiveSettings.theme === 'dark' ? '#2a2a2a' : '#e8e8e8',
+                        borderColor: ACCENT_COLORS[effectiveSettings.accent_color]?.primary || colors.primary,
+                      }
+                    ]}>
+                      <Text style={[
+                        styles.previewTagText,
+                        {
+                          color: ACCENT_COLORS[effectiveSettings.accent_color]?.primary || colors.primary,
+                          fontSize: effectiveSettings.font_size === 'small' ? 10 : effectiveSettings.font_size === 'large' ? 14 : 12,
+                        }
+                      ]}>
+                        tag
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
               <View style={styles.card}>
                 {/* Theme */}
                 <SettingRow
-                  icon={<Palette size={16} color={colors.textMuted} />}
+                  icon={<Palette size={16} color={staticColors.textMuted} />}
                   label="Theme"
                 >
                   <SegmentedControl
@@ -615,8 +886,8 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                       { label: 'Dark', value: 'dark' as const },
                       { label: 'Light', value: 'light' as const },
                     ]}
-                    value={settings.theme}
-                    onChange={(v) => updateSetting('theme', v)}
+                    value={effectiveSettings.theme}
+                    onChange={(v) => setPendingSetting('theme', v)}
                   />
                 </SettingRow>
 
@@ -626,12 +897,12 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                 <View style={rowStyles.container}>
                   <View style={rowStyles.header}>
                     <View style={rowStyles.icon}>
-                      <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: ACCENT_COLORS[settings.accent_color]?.primary || colors.primary }} />
+                      <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: ACCENT_COLORS[effectiveSettings.accent_color]?.primary || colors.primary }} />
                     </View>
                     <View style={rowStyles.labelContainer}>
                       <Text style={rowStyles.label}>Accent Color</Text>
                       <Text style={rowStyles.description}>
-                        {ACCENT_COLORS[settings.accent_color]?.name || 'Beige'}
+                        {ACCENT_COLORS[effectiveSettings.accent_color]?.name || 'Beige'}
                       </Text>
                     </View>
                   </View>
@@ -639,20 +910,20 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                     {Object.entries(ACCENT_COLORS).map(([key, color]) => (
                       <TouchableOpacity
                         key={key}
-                        onPress={() => updateSetting('accent_color', key)}
+                        onPress={() => setPendingSetting('accent_color', key as any)}
                         activeOpacity={0.7}
                         style={{
                           width: 36,
                           height: 36,
                           borderRadius: 4,
                           backgroundColor: color.primary,
-                          borderWidth: settings.accent_color === key ? 2 : 0,
-                          borderColor: colors.textPrimary,
+                          borderWidth: effectiveSettings.accent_color === key ? 2 : 0,
+                          borderColor: staticColors.textPrimary,
                           justifyContent: 'center',
                           alignItems: 'center',
                         }}
                       >
-                        {settings.accent_color === key && (
+                        {effectiveSettings.accent_color === key && (
                           <Check size={14} color="#fff" />
                         )}
                       </TouchableOpacity>
@@ -662,27 +933,9 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
 
                 <View style={styles.divider} />
 
-                {/* Default View Mode */}
-                <SettingRow
-                  icon={<Layout size={16} color={colors.textMuted} />}
-                  label="Default View Mode"
-                >
-                  <SegmentedControl
-                    options={[
-                      { label: 'List', value: 'list' as const },
-                      { label: 'Calendar', value: 'calendar' as const },
-                      { label: 'Boxes', value: 'boxes' as const },
-                    ]}
-                    value={settings.default_view_mode}
-                    onChange={(v) => updateSetting('default_view_mode', v)}
-                  />
-                </SettingRow>
-
-                <View style={styles.divider} />
-
                 {/* Font Size */}
                 <SettingRow
-                  icon={<Type size={16} color={colors.textMuted} />}
+                  icon={<Type size={16} color={staticColors.textMuted} />}
                   label="Font Size"
                 >
                   <SegmentedControl
@@ -691,20 +944,141 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                       { label: 'Medium', value: 'medium' as const },
                       { label: 'Large', value: 'large' as const },
                     ]}
-                    value={settings.font_size}
-                    onChange={(v) => updateSetting('font_size', v)}
+                    value={effectiveSettings.font_size}
+                    onChange={(v) => setPendingSetting('font_size', v)}
+                  />
+                </SettingRow>
+
+                <View style={styles.divider} />
+
+                {/* View Density */}
+                <SettingRow
+                  icon={<Layout size={16} color={staticColors.textMuted} />}
+                  label="View Density"
+                  description="Spacing between UI elements"
+                >
+                  <SegmentedControl
+                    options={[
+                      { label: 'Compact', value: 'compact' as const },
+                      { label: 'Comfortable', value: 'comfortable' as const },
+                    ]}
+                    value={effectiveSettings.view_density}
+                    onChange={(v) => setPendingSetting('view_density', v)}
                   />
                 </SettingRow>
               </View>
+
+              {/* Chat Appearance */}
+              <View style={styles.card}>
+                <Text style={styles.subsectionLabel}>CHAT APPEARANCE</Text>
+
+                {/* Chat Font Size */}
+                <SettingRow
+                  icon={<MessageSquare size={16} color={staticColors.textMuted} />}
+                  label="Chat Font Size"
+                >
+                  <SegmentedControl
+                    options={[
+                      { label: 'Small', value: 'small' as const },
+                      { label: 'Medium', value: 'medium' as const },
+                      { label: 'Large', value: 'large' as const },
+                    ]}
+                    value={effectiveSettings.chat_font_size}
+                    onChange={(v) => setPendingSetting('chat_font_size', v)}
+                  />
+                </SettingRow>
+
+                <View style={styles.divider} />
+
+                {/* Agent Text Color */}
+                <View style={rowStyles.container}>
+                  <View style={rowStyles.header}>
+                    <View style={{ width: 16, height: 16, borderRadius: 3, backgroundColor: computePreviewColor(effectiveSettings.chat_agent_text_mode, effectiveSettings.chat_agent_text_brightness, colors.primary), borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }} />
+                    <View style={rowStyles.labelContainer}>
+                      <Text style={rowStyles.label}>Agent Text Color</Text>
+                    </View>
+                  </View>
+                  <View style={rowStyles.control}>
+                    <SegmentedControl
+                      options={[
+                        { label: 'Accent', value: 'accent' as const },
+                        { label: 'Grayscale', value: 'grayscale' as const },
+                      ]}
+                      value={effectiveSettings.chat_agent_text_mode}
+                      onChange={(v) => setPendingSetting('chat_agent_text_mode', v)}
+                    />
+                    <BrightnessSlider
+                      value={effectiveSettings.chat_agent_text_brightness}
+                      onChange={(v) => setPendingSetting('chat_agent_text_brightness', v)}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.divider} />
+
+                {/* User Text Color */}
+                <View style={rowStyles.container}>
+                  <View style={rowStyles.header}>
+                    <View style={{ width: 16, height: 16, borderRadius: 3, backgroundColor: computePreviewColor(effectiveSettings.chat_user_text_mode, effectiveSettings.chat_user_text_brightness, colors.primary), borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }} />
+                    <View style={rowStyles.labelContainer}>
+                      <Text style={rowStyles.label}>User Text Color</Text>
+                    </View>
+                  </View>
+                  <View style={rowStyles.control}>
+                    <SegmentedControl
+                      options={[
+                        { label: 'Accent', value: 'accent' as const },
+                        { label: 'Grayscale', value: 'grayscale' as const },
+                      ]}
+                      value={effectiveSettings.chat_user_text_mode}
+                      onChange={(v) => setPendingSetting('chat_user_text_mode', v)}
+                    />
+                    <BrightnessSlider
+                      value={effectiveSettings.chat_user_text_brightness}
+                      onChange={(v) => setPendingSetting('chat_user_text_brightness', v)}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.divider} />
+
+                {/* Chat Background */}
+                <View style={rowStyles.container}>
+                  <View style={rowStyles.header}>
+                    <View style={{ width: 16, height: 16, borderRadius: 3, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
+                      <View style={{ flex: 1, backgroundColor: effectiveSettings.chat_background_mode === 'accent' ? colors.primary : '#000000', opacity: effectiveSettings.chat_background_brightness / 100 || 0.08 }} />
+                    </View>
+                    <View style={rowStyles.labelContainer}>
+                      <Text style={rowStyles.label}>Chat Background</Text>
+                    </View>
+                  </View>
+                  <View style={rowStyles.control}>
+                    <SegmentedControl
+                      options={[
+                        { label: 'Accent', value: 'accent' as const },
+                        { label: 'Grayscale', value: 'grayscale' as const },
+                      ]}
+                      value={effectiveSettings.chat_background_mode}
+                      onChange={(v) => setPendingSetting('chat_background_mode', v)}
+                    />
+                    <BrightnessSlider
+                      value={effectiveSettings.chat_background_brightness}
+                      onChange={(v) => setPendingSetting('chat_background_brightness', v)}
+                    />
+                  </View>
+                </View>
+              </View>
             </View>
+            )}
 
             {/* ===== AI BEHAVIOR ===== */}
+            {currentSection === 'ai' && (
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>AI BEHAVIOR</Text>
               <View style={styles.card}>
                 {/* Agent Personality */}
                 <SettingRow
-                  icon={<Brain size={16} color={colors.textMuted} />}
+                  icon={<Brain size={16} color={staticColors.textMuted} />}
                   label="Agent Personality"
                   description={personalityDescriptions[settings.ai_response_style]}
                 >
@@ -723,7 +1097,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
 
                 {/* Auto-tagging */}
                 <SettingRow
-                  icon={<Tag size={16} color={colors.textMuted} />}
+                  icon={<Tag size={16} color={staticColors.textMuted} />}
                   label="Auto-Tagging"
                   description="How aggressively the AI tags notes"
                 >
@@ -742,7 +1116,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
 
                 {/* Confirmation level */}
                 <SettingRow
-                  icon={<ShieldCheck size={16} color={colors.textMuted} />}
+                  icon={<ShieldCheck size={16} color={staticColors.textMuted} />}
                   label="Confirmation Level"
                   description="When to ask before executing"
                 >
@@ -758,14 +1132,16 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                 </SettingRow>
               </View>
             </View>
+            )}
 
             {/* ===== CONTENT ===== */}
+            {currentSection === 'content' && (
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>CONTENT</Text>
               <View style={styles.card}>
                 {/* Default Page */}
                 <SettingRow
-                  icon={<BookOpen size={16} color={colors.textMuted} />}
+                  icon={<BookOpen size={16} color={staticColors.textMuted} />}
                   label="Default Page"
                   description="Page to open on startup"
                 >
@@ -787,7 +1163,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                     <>
                       <View style={styles.divider} />
                       <SettingRow
-                        icon={<Layout size={16} color={colors.textMuted} />}
+                        icon={<Layout size={16} color={staticColors.textMuted} />}
                         label="Default Section"
                       >
                         <SectionPicker
@@ -804,7 +1180,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
 
                 {/* Note sort order */}
                 <SettingRow
-                  icon={<SortDesc size={16} color={colors.textMuted} />}
+                  icon={<SortDesc size={16} color={staticColors.textMuted} />}
                   label="Note Sort Order"
                 >
                   <SegmentedControl
@@ -823,7 +1199,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
 
                 {/* Auto-archive */}
                 <SettingRow
-                  icon={<Archive size={16} color={colors.textMuted} />}
+                  icon={<Archive size={16} color={staticColors.textMuted} />}
                   label="Auto-Archive Completed"
                   description="Archive done notes after"
                 >
@@ -840,14 +1216,16 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                 </SettingRow>
               </View>
             </View>
+            )}
 
             {/* ===== DATA & PRIVACY ===== */}
+            {currentSection === 'data' && (
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>DATA & PRIVACY</Text>
               <View style={styles.card}>
                 {/* Chat history retention */}
                 <SettingRow
-                  icon={<MessageSquare size={16} color={colors.textMuted} />}
+                  icon={<MessageSquare size={16} color={staticColors.textMuted} />}
                   label="Chat History"
                   description="How long to keep chat messages"
                 >
@@ -867,7 +1245,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                 {/* RAG Context */}
                 <View style={styles.toggleRow}>
                   <View style={styles.toggleLeft}>
-                    <Database size={16} color={colors.textMuted} />
+                    <Database size={16} color={staticColors.textMuted} />
                     <View style={styles.toggleLabelContainer}>
                       <Text style={styles.toggleLabel}>AI Context Search</Text>
                       <Text style={styles.toggleDescription}>
@@ -878,8 +1256,8 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                   <Switch
                     value={settings.rag_context_enabled}
                     onValueChange={(v) => updateSetting('rag_context_enabled', v)}
-                    trackColor={{ false: colors.border, true: colors.primary }}
-                    thumbColor={colors.textPrimary}
+                    trackColor={{ false: staticColors.border, true: colors.primary }}
+                    thumbColor={staticColors.textPrimary}
                   />
                 </View>
               </View>
@@ -888,7 +1266,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
               <View style={styles.card}>
                 <View style={styles.toggleRow}>
                   <View style={styles.toggleLeft}>
-                    <Brain size={16} color={colors.textMuted} />
+                    <Brain size={16} color={staticColors.textMuted} />
                     <View style={styles.toggleLabelContainer}>
                       <Text style={styles.toggleLabel}>AI Memory</Text>
                       <Text style={styles.toggleDescription}>
@@ -904,15 +1282,15 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                   disabled={clearingMemory}
                 >
                   {clearingMemory ? (
-                    <ActivityIndicator size="small" color={colors.textMuted} />
+                    <ActivityIndicator size="small" color={staticColors.textMuted} />
                   ) : memoryCleared ? (
                     <>
-                      <Check size={14} color={colors.success} />
-                      <Text style={[styles.dangerRowText, { color: colors.success }]}>Memory Cleared</Text>
+                      <Check size={14} color={staticColors.success} />
+                      <Text style={[styles.dangerRowText, { color: staticColors.success }]}>Memory Cleared</Text>
                     </>
                   ) : (
                     <>
-                      <Trash2 size={14} color={colors.textMuted} />
+                      <Trash2 size={14} color={staticColors.textMuted} />
                       <Text style={styles.dangerRowText}>Clear Memory</Text>
                     </>
                   )}
@@ -934,7 +1312,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                     activeOpacity={0.7}
                     disabled={!!exporting}
                   >
-                    <FileText size={14} color={exporting === 'markdown' ? colors.primary : colors.textMuted} />
+                    <FileText size={14} color={exporting === 'markdown' ? colors.primary : staticColors.textMuted} />
                     <Text style={styles.exportLabel}>
                       {exporting === 'markdown' ? 'Exporting...' : 'Markdown'}
                     </Text>
@@ -945,7 +1323,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                     activeOpacity={0.7}
                     disabled={!!exporting}
                   >
-                    <FileText size={14} color={exporting === 'json' ? colors.primary : colors.textMuted} />
+                    <FileText size={14} color={exporting === 'json' ? colors.primary : staticColors.textMuted} />
                     <Text style={styles.exportLabel}>
                       {exporting === 'json' ? 'Exporting...' : 'JSON'}
                     </Text>
@@ -956,7 +1334,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                     activeOpacity={0.7}
                     disabled={!!exporting}
                   >
-                    <FileText size={14} color={exporting === 'csv' ? colors.primary : colors.textMuted} />
+                    <FileText size={14} color={exporting === 'csv' ? colors.primary : staticColors.textMuted} />
                     <Text style={styles.exportLabel}>
                       {exporting === 'csv' ? 'Exporting...' : 'CSV'}
                     </Text>
@@ -978,22 +1356,66 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                   activeOpacity={0.7}
                   disabled={!!exporting}
                 >
-                  <HardDrive size={14} color={exporting === 'backup' ? colors.primary : colors.textMuted} />
+                  <HardDrive size={14} color={exporting === 'backup' ? colors.primary : staticColors.textMuted} />
                   <Text style={styles.exportLabel}>
                     {exporting === 'backup' ? 'Downloading...' : 'Download Backup'}
                   </Text>
                 </TouchableOpacity>
               </View>
+
+              {/* Team Settings */}
+              <View style={styles.card}>
+                <Text style={styles.subsectionLabel}>TEAM SETTINGS</Text>
+
+                {/* Default Member Permission */}
+                <SettingRow
+                  icon={<Users size={16} color={staticColors.textMuted} />}
+                  label="Default Permission"
+                  description="Default role for new team members"
+                >
+                  <SegmentedControl
+                    options={[
+                      { label: 'Team', value: 'team' as const },
+                      { label: 'Limited', value: 'team-limited' as const },
+                    ]}
+                    value={settings.default_member_permission}
+                    onChange={(v) => updateSetting('default_member_permission', v)}
+                  />
+                </SettingRow>
+
+                <View style={styles.divider} />
+
+                {/* Require Invite Approval */}
+                <View style={styles.toggleRow}>
+                  <View style={styles.toggleLeft}>
+                    <UserCheck size={16} color={staticColors.textMuted} />
+                    <View style={styles.toggleLabelContainer}>
+                      <Text style={styles.toggleLabel}>Require Approval</Text>
+                      <Text style={styles.toggleDescription}>
+                        New invites need your approval
+                      </Text>
+                    </View>
+                  </View>
+                  <Switch
+                    value={settings.require_invite_approval}
+                    onValueChange={(v) => updateSetting('require_invite_approval', v)}
+                    trackColor={{ false: staticColors.border, true: colors.primary }}
+                    thumbColor={staticColors.textPrimary}
+                  />
+                </View>
+              </View>
             </View>
+            )}
 
             {/* ===== DEVELOPER ===== */}
+            {currentSection === 'developer' && (
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>DEVELOPER</Text>
               <View style={styles.card}>
                 {/* OpenAI API Key */}
                 <View style={styles.inputRow}>
                   <View style={styles.inputHeader}>
-                    <Key size={16} color={colors.textMuted} />
+                    <Key size={16} color={staticColors.textMuted} />
                     <Text style={styles.inputLabel}>OpenAI API Key</Text>
                   </View>
                   <View style={styles.inputContainer}>
@@ -1002,7 +1424,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                       value={settings.custom_openai_key || ''}
                       onChangeText={(v) => updateSetting('custom_openai_key', v || null)}
                       placeholder="sk-..."
-                      placeholderTextColor={colors.textMuted}
+                      placeholderTextColor={staticColors.textMuted}
                       secureTextEntry={!showApiKey}
                       autoCapitalize="none"
                       autoCorrect={false}
@@ -1012,9 +1434,9 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                       style={styles.eyeButton}
                     >
                       {showApiKey ? (
-                        <EyeOff size={16} color={colors.textMuted} />
+                        <EyeOff size={16} color={staticColors.textMuted} />
                       ) : (
-                        <Eye size={16} color={colors.textMuted} />
+                        <Eye size={16} color={staticColors.textMuted} />
                       )}
                     </TouchableOpacity>
                   </View>
@@ -1025,35 +1447,57 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                 {/* OpenAI Model */}
                 <View style={styles.inputRow}>
                   <View style={styles.inputHeader}>
-                    <Cpu size={16} color={colors.textMuted} />
+                    <Cpu size={16} color={staticColors.textMuted} />
                     <Text style={styles.inputLabel}>OpenAI Model</Text>
                   </View>
                   <TextInput
                     style={[styles.textInput, { flex: 0 }]}
                     value={settings.custom_openai_model || ''}
                     onChangeText={(v) => updateSetting('custom_openai_model', v || null)}
-                    placeholder="gpt-4o-mini"
-                    placeholderTextColor={colors.textMuted}
+                    placeholder="gpt-4.1-mini"
+                    placeholderTextColor={staticColors.textMuted}
                     autoCapitalize="none"
                     autoCorrect={false}
                   />
                 </View>
               </View>
             </View>
+            )}
 
             {/* ===== APP ===== */}
+            {currentSection === 'app' && (
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>APP</Text>
               <View style={styles.card}>
+                {/* Default View Mode */}
+                <SettingRow
+                  icon={<Layout size={16} color={staticColors.textMuted} />}
+                  label="Default View Mode"
+                  description="How notes are displayed when opening a page"
+                >
+                  <SegmentedControl
+                    options={[
+                      { label: 'List', value: 'list' as const },
+                      { label: 'Calendar', value: 'calendar' as const },
+                      { label: 'Boxes', value: 'boxes' as const },
+                    ]}
+                    value={settings.default_view_mode}
+                    onChange={(v) => updateSetting('default_view_mode', v)}
+                  />
+                </SettingRow>
+
+                <View style={styles.divider} />
+
                 <View style={styles.infoRow}>
                   <View style={styles.infoLeft}>
-                    <Info size={16} color={colors.textMuted} />
+                    <Info size={16} color={staticColors.textMuted} />
                     <Text style={styles.infoLabel}>Version</Text>
                   </View>
                   <Text style={styles.infoValue}>1.0.0</Text>
                 </View>
               </View>
             </View>
+            )}
 
             {/* Sign Out */}
             <TouchableOpacity
@@ -1061,7 +1505,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
               onPress={handleLogout}
               activeOpacity={0.7}
             >
-              <LogOut size={16} color={colors.danger} />
+              <LogOut size={16} color={staticColors.danger} />
               <Text style={styles.signOutText}>SIGN OUT</Text>
             </TouchableOpacity>
 
@@ -1071,7 +1515,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
               onPress={handleDeleteAccount}
               activeOpacity={0.7}
             >
-              <Trash2 size={16} color={colors.danger} />
+              <Trash2 size={16} color={staticColors.danger} />
               <Text style={styles.deleteText}>DELETE ACCOUNT</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -1092,25 +1536,22 @@ const segStyles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   segment: {
     flex: 1,
     paddingVertical: 8,
     alignItems: 'center',
   },
-  segmentActive: {
-    backgroundColor: colors.primary,
-  },
   segmentText: {
     fontFamily: theme.fonts.regular,
     fontSize: 12,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 0.5,
   },
   segmentTextActive: {
     fontFamily: theme.fonts.semibold,
-    color: colors.bg,
+    color: staticColors.bg,
   },
 });
 
@@ -1131,16 +1572,63 @@ const rowStyles = StyleSheet.create({
   label: {
     fontFamily: theme.fonts.medium,
     fontSize: 14,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   description: {
     fontFamily: theme.fonts.regular,
     fontSize: 12,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     marginTop: 2,
   },
   control: {
     marginTop: 4,
+  },
+});
+
+// Slider styles
+const sliderStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 4,
+  },
+  track: {
+    flex: 1,
+    height: 4,
+    backgroundColor: staticColors.border,
+    borderRadius: 2,
+    position: 'relative',
+  },
+  fill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    borderRadius: 2,
+  },
+  thumb: {
+    position: 'absolute',
+    top: -6,
+    width: 16,
+    height: 16,
+    marginLeft: -8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  thumbInner: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: staticColors.bg,
+  },
+  valueText: {
+    fontFamily: theme.fonts.medium,
+    fontSize: 13,
+    color: staticColors.textMuted,
+    width: 40,
+    textAlign: 'right',
   },
 });
 
@@ -1159,7 +1647,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: SCREEN_WIDTH,
-    backgroundColor: colors.bg,
+    backgroundColor: staticColors.bg,
     flexDirection: 'column',
   },
   header: {
@@ -1169,7 +1657,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
     height: 56,
   },
   backButton: {
@@ -1181,7 +1669,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: theme.fonts.semibold,
     fontSize: 15,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     letterSpacing: 1,
   },
   scrollContent: {
@@ -1196,19 +1684,87 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontFamily: theme.fonts.semibold,
     fontSize: 11,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 1.5,
     marginBottom: 12,
   },
-  card: {
-    backgroundColor: colors.surface,
+  subsectionLabel: {
+    fontFamily: theme.fonts.semibold,
+    fontSize: 10,
+    color: staticColors.textMuted,
+    letterSpacing: 1.5,
+    marginBottom: 12,
+  },
+  previewContainer: {
+    marginBottom: 20,
+  },
+  previewLabel: {
+    fontFamily: theme.fonts.semibold,
+    fontSize: 11,
+    color: staticColors.textMuted,
+    letterSpacing: 1.5,
+    marginBottom: 12,
+  },
+  previewCard: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: 4,
     padding: 16,
+    gap: 12,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  previewDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  previewTitle: {
+    fontFamily: theme.fonts.medium,
+    fontSize: 15,
+  },
+  previewText: {
+    fontFamily: theme.fonts.regular,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  previewTags: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  previewTag: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  previewTagText: {
+    fontFamily: theme.fonts.medium,
+    fontSize: 11,
+  },
+  card: {
+    backgroundColor: staticColors.surface,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    padding: 16,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 4,
+  },
+  menuItemText: {
+    flex: 1,
+    fontFamily: theme.fonts.medium,
+    fontSize: 15,
+    color: staticColors.textPrimary,
   },
   divider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: staticColors.border,
     marginVertical: 14,
   },
   userRow: {
@@ -1220,14 +1776,13 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
     fontFamily: theme.fonts.semibold,
     fontSize: 16,
-    color: colors.bg,
+    color: staticColors.bg,
   },
   userInfo: {
     flex: 1,
@@ -1235,13 +1790,13 @@ const styles = StyleSheet.create({
   userName: {
     fontFamily: theme.fonts.medium,
     fontSize: 15,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     marginBottom: 2,
   },
   userEmail: {
     fontFamily: theme.fonts.regular,
     fontSize: 13,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   infoRow: {
     flexDirection: 'row',
@@ -1257,17 +1812,17 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontFamily: theme.fonts.regular,
     fontSize: 14,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   infoValue: {
     fontFamily: theme.fonts.regular,
     fontSize: 14,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   infoValueSmall: {
     fontFamily: theme.fonts.regular,
     fontSize: 12,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   copyRow: {
     flexDirection: 'row',
@@ -1291,12 +1846,12 @@ const styles = StyleSheet.create({
   toggleLabel: {
     fontFamily: theme.fonts.medium,
     fontSize: 14,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   toggleDescription: {
     fontFamily: theme.fonts.regular,
     fontSize: 12,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     marginTop: 2,
   },
   inputRow: {
@@ -1310,28 +1865,28 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontFamily: theme.fonts.medium,
     fontSize: 14,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   textInput: {
     fontFamily: theme.fonts.regular,
     fontSize: 13,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   textInputInline: {
     flex: 1,
     fontFamily: theme.fonts.regular,
     fontSize: 13,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     paddingVertical: 10,
     paddingHorizontal: 12,
   },
@@ -1344,12 +1899,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     marginTop: 8,
   },
   signOutText: {
     fontFamily: theme.fonts.medium,
-    color: colors.danger,
+    color: staticColors.danger,
     fontSize: 12,
     letterSpacing: 1.5,
     marginLeft: 10,
@@ -1363,7 +1918,7 @@ const styles = StyleSheet.create({
   },
   deleteText: {
     fontFamily: theme.fonts.regular,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     fontSize: 11,
     letterSpacing: 1,
     marginLeft: 8,
@@ -1372,19 +1927,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
   },
   footerLogo: {
     fontFamily: theme.fonts.semibold,
     fontSize: 16,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 3,
     marginBottom: 6,
   },
   footerTagline: {
     fontFamily: theme.fonts.regular,
     fontSize: 12,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   dangerRowButton: {
     flexDirection: 'row',
@@ -1394,12 +1949,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   dangerRowText: {
     fontFamily: theme.fonts.medium,
     fontSize: 13,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   exportButton: {
     flex: 1,
@@ -1409,12 +1964,51 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   exportLabel: {
     fontFamily: theme.fonts.medium,
     fontSize: 12,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: staticColors.border,
+    backgroundColor: staticColors.surface,
+  },
+  revertButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  revertButtonText: {
+    fontFamily: theme.fonts.semibold,
+    fontSize: 11,
+    color: staticColors.textMuted,
+    letterSpacing: 1,
+  },
+  saveButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButtonText: {
+    fontFamily: theme.fonts.semibold,
+    fontSize: 11,
+    color: staticColors.bg,
+    letterSpacing: 1,
   },
 });
 
@@ -1426,33 +2020,29 @@ const pickerStyles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bg,
+    borderColor: staticColors.border,
+    backgroundColor: staticColors.bg,
   },
   triggerText: {
     fontFamily: theme.fonts.regular,
     fontSize: 14,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   dropdown: {
     marginTop: 4,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderColor: staticColors.border,
+    backgroundColor: staticColors.surface,
   },
   option: {
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   optionText: {
     fontFamily: theme.fonts.regular,
     fontSize: 14,
-    color: colors.textSecondary,
-  },
-  optionSelected: {
-    color: colors.primary,
-    fontFamily: theme.fonts.medium,
+    color: staticColors.textSecondary,
   },
 });

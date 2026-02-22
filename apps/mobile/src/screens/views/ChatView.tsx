@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Send, Mic } from 'lucide-react-native';
-import { colors, theme } from '../../styles';
+import { colors as staticColors, theme } from '../../styles';
 
 interface Message {
   id: string;
@@ -101,7 +101,7 @@ export default function ChatView() {
             ref={inputRef}
             style={styles.input}
             placeholder="Type a message..."
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={staticColors.textMuted}
             multiline
             maxLength={2000}
             value={message}
@@ -113,7 +113,7 @@ export default function ChatView() {
               style={styles.voiceButton}
               activeOpacity={0.7}
             >
-              <Mic size={18} color={colors.textMuted} />
+              <Mic size={18} color={staticColors.textMuted} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -127,7 +127,7 @@ export default function ChatView() {
             >
               <Send
                 size={18}
-                color={message.trim() ? colors.primary : colors.textMuted}
+                color={message.trim() ? colors.primary : staticColors.textMuted}
               />
             </TouchableOpacity>
           </View>
@@ -157,14 +157,14 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: theme.fonts.medium,
     fontSize: 18,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     marginBottom: 12,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontFamily: theme.fonts.regular,
     fontSize: 14,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   messageLabel: {
     fontFamily: theme.fonts.medium,
     fontSize: 10,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 1,
     marginBottom: 6,
   },
@@ -191,14 +191,14 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   userMessageText: {
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   assistantMessageText: {
-    color: colors.textSecondary,
+    color: staticColors.textSecondary,
   },
   inputContainer: {
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
     paddingTop: 12,
     paddingHorizontal: 16,
   },
@@ -206,13 +206,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     backgroundColor: 'transparent',
   },
   input: {
     flex: 1,
     fontFamily: theme.fonts.regular,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     fontSize: 15,
     paddingHorizontal: 14,
     paddingVertical: 12,

@@ -7,4 +7,5 @@ export { default as SettingsDrawer } from './SettingsDrawer';
 export { default as PageContextMenu } from './PageContextMenu';
 export { default as ShareSheet } from './ShareSheet';
 export { default as SharedPageBanner } from './SharedPageBanner';
+export { default as HomeView } from './HomeView';
 export type { DropTarget } from './MoveOverlay';

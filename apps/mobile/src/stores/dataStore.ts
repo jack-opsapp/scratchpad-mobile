@@ -12,11 +12,17 @@ export interface SharedPage extends PageWithSections {
   ownerEmail: string;
 }
 
+export interface UserProfile {
+  email: string;
+  full_name: string | null;
+}
+
 interface DataState {
   pages: PageWithSections[];
   sharedPages: SharedPage[];
   notes: Note[];
   tags: string[];
+  userProfiles: Record<string, UserProfile>;
   loading: boolean;
   error: string | null;
   lastFetched: number | null;
@@ -57,6 +63,7 @@ export const useDataStore = create<DataState>()(
       sharedPages: [],
       notes: [],
       tags: [],
+      userProfiles: {},
       loading: false,
       error: null,
       lastFetched: null,
@@ -252,11 +259,52 @@ export const useDataStore = create<DataState>()(
           const allNotes = [...notes, ...sharedNotes];
           const tags = [...new Set(allNotes.flatMap((n: Note) => n.tags))].sort();
 
+          // Fetch user profiles for note creators
+          const creatorIds = [...new Set(
+            allNotes
+              .map((n: Note) => n.created_by_user_id)
+              .filter((id): id is string => !!id),
+          )];
+
+          const userProfiles: Record<string, UserProfile> = {};
+
+          // Add current user profile from authStore
+          if (user.email) {
+            userProfiles[user.id] = {
+              email: user.email,
+              full_name: (user as any).user_metadata?.full_name || null,
+            };
+          }
+
+          // Fetch other creator profiles
+          const otherCreatorIds = creatorIds.filter((id) => id !== user.id);
+          if (otherCreatorIds.length > 0) {
+            try {
+              const { data: profilesData } = await supabase
+                .from('users')
+                .select('id, email, raw_user_meta_data')
+                .in('id', otherCreatorIds);
+
+              if (profilesData) {
+                for (const profile of profilesData) {
+                  userProfiles[profile.id] = {
+                    email: profile.email || '',
+                    full_name: profile.raw_user_meta_data?.full_name || null,
+                  };
+                }
+              }
+            } catch (e) {
+              // Profile lookup is best-effort; continue without it
+              console.log('[DataStore] Profile lookup failed, using fallback:', e);
+            }
+          }
+
           set({
             pages,
             sharedPages,
             notes: allNotes,
             tags,
+            userProfiles,
             loading: false,
             lastFetched: Date.now(),
           });
@@ -338,19 +386,39 @@ export const useDataStore = create<DataState>()(
         return { notes: newNotes, tags: newTags };
       }),
 
-      updateNote: (id, updates) => set((state) => {
-        const newNotes = state.notes.map((n) =>
-          n.id === id ? { ...n, ...updates } : n
-        );
-        const newTags = [...new Set(newNotes.flatMap((n) => n.tags))].sort();
-        return { notes: newNotes, tags: newTags };
-      }),
+      updateNote: (id, updates) => {
+        set((state) => {
+          const newNotes = state.notes.map((n) =>
+            n.id === id ? { ...n, ...updates } : n
+          );
+          const newTags = [...new Set(newNotes.flatMap((n) => n.tags))].sort();
+          return { notes: newNotes, tags: newTags };
+        });
+        // Persist to Supabase
+        supabase
+          .from('notes')
+          .update(updates)
+          .eq('id', id)
+          .then(({ error }) => {
+            if (error) console.error('Update note error:', error);
+          });
+      },
 
-      removeNote: (id) => set((state) => {
-        const newNotes = state.notes.filter((n) => n.id !== id);
-        const newTags = [...new Set(newNotes.flatMap((n) => n.tags))].sort();
-        return { notes: newNotes, tags: newTags };
-      }),
+      removeNote: (id) => {
+        set((state) => {
+          const newNotes = state.notes.filter((n) => n.id !== id);
+          const newTags = [...new Set(newNotes.flatMap((n) => n.tags))].sort();
+          return { notes: newNotes, tags: newTags };
+        });
+        // Persist to Supabase
+        supabase
+          .from('notes')
+          .delete()
+          .eq('id', id)
+          .then(({ error }) => {
+            if (error) console.error('Delete note error:', error);
+          });
+      },
 
       moveNote: async (noteId, toSectionId) => {
         // Optimistic update

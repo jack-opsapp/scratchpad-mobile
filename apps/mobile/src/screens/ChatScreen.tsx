@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Send } from 'lucide-react-native';
-import { colors, theme } from '../styles';
+import { colors as staticColors, theme } from '../styles';
 
 export default function ChatScreen() {
   return (
@@ -26,12 +26,12 @@ export default function ChatScreen() {
           <TextInput
             style={styles.input}
             placeholder="Type a message..."
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={staticColors.textMuted}
             multiline
             maxLength={2000}
           />
           <TouchableOpacity style={styles.sendButton} activeOpacity={0.7}>
-            <Send size={18} color={colors.textMuted} />
+            <Send size={18} color={staticColors.textMuted} />
           </TouchableOpacity>
         </View>
       </View>
@@ -42,18 +42,18 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: staticColors.bg,
   },
   header: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   headerTitle: {
     fontSize: theme.fontSize.xs,
     fontWeight: theme.fontWeight.medium,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
@@ -69,31 +69,31 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: theme.fontSize.lg,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     marginBottom: theme.spacing.sm,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: theme.fontSize.md,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     textAlign: 'center',
     lineHeight: 20,
   },
   inputContainer: {
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
     padding: theme.spacing.md,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     backgroundColor: 'transparent',
   },
   input: {
     flex: 1,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     fontSize: theme.fontSize.base,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,

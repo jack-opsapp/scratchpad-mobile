@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import { useDataStore } from '../../stores/dataStore';
-import { colors, theme } from '../../styles';
+import { colors as staticColors, theme } from '../../styles';
 import type { PageWithSections, Section } from '@slate/shared';
 
 interface PageDetailViewProps {
@@ -33,7 +33,7 @@ export default function PageDetailView({ page, onSectionSelect }: PageDetailView
             <Text style={styles.sectionName}>{section.name}</Text>
             <Text style={styles.sectionStats}>{noteCount} notes</Text>
           </View>
-          <ChevronRight size={16} color={colors.textMuted} />
+          <ChevronRight size={16} color={staticColors.textMuted} />
         </TouchableOpacity>
       );
     },
@@ -79,12 +79,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   sectionCount: {
     fontFamily: theme.fonts.medium,
     fontSize: 11,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 1,
   },
   list: {
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   sectionInfo: {
     flex: 1,
@@ -106,12 +106,12 @@ const styles = StyleSheet.create({
   sectionName: {
     fontFamily: theme.fonts.regular,
     fontSize: 16,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   sectionStats: {
     fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.sm,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     marginTop: theme.spacing.xs,
   },
   emptyContainer: {
@@ -123,13 +123,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSize.lg,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   emptySubtitle: {
     fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.md,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     textAlign: 'center',
   },
 });

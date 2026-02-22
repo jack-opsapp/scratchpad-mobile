@@ -3,7 +3,8 @@ import { ActivityIndicator, View, StyleSheet, StatusBar } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../stores/authStore';
-import { colors } from '../styles';
+import { useTheme } from '../contexts/ThemeContext';
+import { colors as staticColors } from '../styles';
 
 import AuthNavigator from './AuthNavigator';
 import MainScreen from '../screens/MainScreen';
@@ -14,6 +15,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
   const { user, loading, initialized, initialize } = useAuthStore();
+  const colors = useTheme();
 
   useEffect(() => {
     initialize();
@@ -23,7 +25,7 @@ export default function RootNavigator() {
   if (!initialized || loading) {
     return (
       <View style={styles.loading}>
-        <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
+        <StatusBar barStyle="light-content" backgroundColor={staticColors.bg} />
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -35,19 +37,19 @@ export default function RootNavigator() {
         dark: true,
         colors: {
           primary: colors.primary,
-          background: colors.bg,
-          card: colors.surface,
-          text: colors.textPrimary,
-          border: colors.border,
+          background: staticColors.bg,
+          card: staticColors.surface,
+          text: staticColors.textPrimary,
+          border: staticColors.border,
           notification: colors.primary,
         },
       }}
     >
-      <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
+      <StatusBar barStyle="light-content" backgroundColor={staticColors.bg} />
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: colors.bg },
+          contentStyle: { backgroundColor: staticColors.bg },
           animation: 'slide_from_right',
         }}
       >
@@ -66,6 +68,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.bg,
+    backgroundColor: '#000000',
   },
 });

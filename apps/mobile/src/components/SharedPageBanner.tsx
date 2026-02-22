@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { PermissionRole } from '@slate/shared';
-import { colors, theme } from '../styles';
+import { colors as staticColors, theme } from '../styles';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface SharedPageBannerProps {
   role: PermissionRole;
@@ -16,6 +17,7 @@ export default function SharedPageBanner({
   onAccept,
   onDecline,
 }: SharedPageBannerProps) {
+  const colors = useTheme();
   const roleLabel = role.replace('-', ' ').toUpperCase();
 
   return (
@@ -24,12 +26,12 @@ export default function SharedPageBanner({
         {ownerEmail} shared this page
       </Text>
       <View style={styles.actionsRow}>
-        <View style={styles.roleBadge}>
-          <Text style={styles.roleText}>{roleLabel}</Text>
+        <View style={[styles.roleBadge, { borderColor: colors.primary }]}>
+          <Text style={[styles.roleText, { color: colors.primary }]}>{roleLabel}</Text>
         </View>
         <View style={styles.buttons}>
           <TouchableOpacity
-            style={styles.acceptButton}
+            style={[styles.acceptButton, { backgroundColor: colors.primary }]}
             onPress={onAccept}
             activeOpacity={0.7}
           >
@@ -50,9 +52,9 @@ export default function SharedPageBanner({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.surface,
+    backgroundColor: staticColors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 8,
@@ -60,7 +62,7 @@ const styles = StyleSheet.create({
   sharedText: {
     fontFamily: theme.fonts.regular,
     fontSize: 13,
-    color: colors.textSecondary,
+    color: staticColors.textSecondary,
   },
   actionsRow: {
     flexDirection: 'row',
@@ -69,14 +71,12 @@ const styles = StyleSheet.create({
   },
   roleBadge: {
     borderWidth: 1,
-    borderColor: colors.primary,
     paddingVertical: 3,
     paddingHorizontal: 8,
   },
   roleText: {
     fontFamily: theme.fonts.semibold,
     fontSize: 10,
-    color: colors.primary,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
@@ -87,24 +87,23 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   acceptButton: {
-    backgroundColor: colors.primary,
     paddingVertical: 8,
     paddingHorizontal: 16,
   },
   acceptText: {
     fontFamily: theme.fonts.semibold,
     fontSize: 13,
-    color: colors.bg,
+    color: staticColors.bg,
   },
   declineButton: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     paddingVertical: 8,
     paddingHorizontal: 16,
   },
   declineText: {
     fontFamily: theme.fonts.regular,
     fontSize: 13,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
 });

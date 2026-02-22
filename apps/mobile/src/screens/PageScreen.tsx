@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronRight, ChevronLeft } from 'lucide-react-native';
 import { useDataStore } from '../stores/dataStore';
-import { colors, theme } from '../styles';
+import { colors as staticColors, theme } from '../styles';
 import type { RootStackScreenProps } from '../navigation/types';
 import type { Section } from '@slate/shared';
 
@@ -48,7 +48,7 @@ export default function PageScreen({ route }: Props) {
           <Text style={styles.sectionName}>{section.name}</Text>
           <Text style={styles.sectionStats}>{noteCount} notes</Text>
         </View>
-        <ChevronRight size={16} color={colors.textMuted} />
+        <ChevronRight size={16} color={staticColors.textMuted} />
       </TouchableOpacity>
     );
   };
@@ -70,7 +70,7 @@ export default function PageScreen({ route }: Props) {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <ChevronLeft size={20} color={colors.textMuted} />
+          <ChevronLeft size={20} color={staticColors.textMuted} />
           <Text style={styles.backText}>PAGES</Text>
         </TouchableOpacity>
       </View>
@@ -99,13 +99,13 @@ export default function PageScreen({ route }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: staticColors.bg,
   },
   header: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   backButton: {
     flexDirection: 'row',
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: theme.fontSize.xs,
     fontWeight: theme.fontWeight.medium,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 1.5,
     marginLeft: theme.spacing.xs,
   },
@@ -122,17 +122,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   pageTitle: {
     fontSize: theme.fontSize.xl,
     fontWeight: theme.fontWeight.medium,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
   sectionCount: {
     fontSize: theme.fontSize.sm,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   list: {
     paddingHorizontal: theme.spacing.md,
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   sectionInfo: {
     flex: 1,
@@ -153,11 +153,11 @@ const styles = StyleSheet.create({
   sectionName: {
     fontSize: theme.fontSize.lg,
     fontWeight: theme.fontWeight.normal,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   sectionStats: {
     fontSize: theme.fontSize.sm,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     marginTop: theme.spacing.xs,
   },
   emptyContainer: {
@@ -169,12 +169,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: theme.fontSize.lg,
     fontWeight: theme.fontWeight.normal,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   emptySubtitle: {
     fontSize: theme.fontSize.md,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     textAlign: 'center',
   },
 });

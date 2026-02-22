@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { ChevronRight, Star } from 'lucide-react-native';
 import { useDataStore } from '../../stores/dataStore';
-import { colors, theme } from '../../styles';
+import { colors as staticColors, theme } from '../../styles';
+import { useTheme } from '../../contexts/ThemeContext';
 import type { PageWithSections } from '@slate/shared';
 
 interface PagesListViewProps {
@@ -18,6 +19,7 @@ interface PagesListViewProps {
 }
 
 export default function PagesListView({ onPageSelect }: PagesListViewProps) {
+  const colors = useTheme();
   const { pages, loading, error, refreshData, getNotesForSection } = useDataStore();
 
   const renderPage = useCallback(
@@ -48,7 +50,7 @@ export default function PagesListView({ onPageSelect }: PagesListViewProps) {
               {page.sections.length} sections · {noteCount} notes
             </Text>
           </View>
-          <ChevronRight size={16} color={colors.textMuted} />
+          <ChevronRight size={16} color={staticColors.textMuted} />
         </TouchableOpacity>
       );
     },
@@ -67,7 +69,7 @@ export default function PagesListView({ onPageSelect }: PagesListViewProps) {
   if (loading && pages.length === 0) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="small" color={colors.textMuted} />
+        <ActivityIndicator size="small" color={staticColors.textMuted} />
       </View>
     );
   }
@@ -90,7 +92,7 @@ export default function PagesListView({ onPageSelect }: PagesListViewProps) {
           <RefreshControl
             refreshing={loading}
             onRefresh={refreshData}
-            tintColor={colors.textMuted}
+            tintColor={staticColors.textMuted}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -110,13 +112,13 @@ const styles = StyleSheet.create({
   },
   errorBanner: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.danger,
+    borderBottomColor: staticColors.danger,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
   },
   errorText: {
     fontFamily: theme.fonts.regular,
-    color: colors.danger,
+    color: staticColors.danger,
     fontSize: theme.fontSize.sm,
   },
   list: {
@@ -130,7 +132,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   pageInfo: {
     flex: 1,
@@ -145,12 +147,12 @@ const styles = StyleSheet.create({
   pageName: {
     fontFamily: theme.fonts.regular,
     fontSize: 16,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   pageStats: {
     fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.sm,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     marginTop: theme.spacing.xs,
   },
   emptyContainer: {
@@ -162,13 +164,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSize.lg,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   emptySubtitle: {
     fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.md,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     textAlign: 'center',
   },
 });

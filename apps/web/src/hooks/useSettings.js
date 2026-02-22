@@ -54,7 +54,10 @@ export const DEFAULT_SETTINGS = {
 
   // Team
   defaultMemberPermission: 'team',
-  requireInviteApproval: false
+  requireInviteApproval: false,
+
+  // Project Context
+  projectContext: '',
 };
 
 // =============================================================================
@@ -91,7 +94,8 @@ const SETTING_TO_COLUMN = {
   customShortcuts: 'custom_shortcuts',
   customOpenAIKey: 'custom_openai_key',
   defaultMemberPermission: 'default_member_permission',
-  requireInviteApproval: 'require_invite_approval'
+  requireInviteApproval: 'require_invite_approval',
+  projectContext: 'project_context',
 };
 
 /**

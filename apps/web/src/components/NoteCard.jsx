@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Trash2 } from 'lucide-react';
+import { Check, Trash2, Plus } from 'lucide-react';
 import { useTypewriter } from '../hooks/useTypewriter.js';
 import { colors } from '../styles/theme.js';
 import { TagPill } from './TagPill.jsx';
@@ -25,6 +25,7 @@ export function NoteCard({
   onToggle,
   onEdit,
   onDelete,
+  onTagAdd,
   isNew,
   currentUserId,
   canEdit = true,
@@ -34,13 +35,22 @@ export function NoteCard({
 }) {
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(note.content);
+  const [addingTag, setAddingTag] = useState(false);
+  const [newTag, setNewTag] = useState('');
   const typewriter = useTypewriter(note.content, 20, 0, isNew);
 
   const isOwnNote = note.created_by_user_id === currentUserId;
   const showCreatorAvatar = note.created_by_user_id && !isOwnNote;
 
   return (
-    <div style={{ padding: '16px 0', borderBottom: `1px solid ${colors.border}` }}>
+    <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('noteId', note.id);
+        e.dataTransfer.setData('notePreview', (note.content || '').substring(0, 12));
+      }}
+      style={{ padding: '16px 0', borderBottom: `1px solid ${colors.border}`, cursor: 'grab' }}
+    >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
         {/* Checkbox */}
         <button
@@ -118,12 +128,12 @@ export function NoteCard({
           )}
 
           {/* Tags and date - hidden in compact mode */}
-          {!compact && (note.tags?.length > 0 || note.date) && (!isNew || typewriter.done) && (
+          {!compact && (!isNew || typewriter.done) && (
             <div
               style={{
                 display: 'flex',
                 gap: 8,
-                marginTop: 10,
+                marginTop: (note.tags?.length > 0 || note.date || onTagAdd) ? 10 : 0,
                 alignItems: 'center',
                 flexWrap: 'wrap',
               }}
@@ -131,6 +141,61 @@ export function NoteCard({
               {note.tags?.map(tag => (
                 <TagPill key={tag} tag={tag} small />
               ))}
+              {/* Inline tag add */}
+              {onTagAdd && canEdit && !addingTag && (
+                <button
+                  onClick={() => setAddingTag(true)}
+                  style={{
+                    background: 'transparent',
+                    border: `1px dashed ${colors.border}`,
+                    borderRadius: 4,
+                    padding: '2px 6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    color: colors.textMuted,
+                    fontSize: 11,
+                  }}
+                  title="Add tag"
+                >
+                  <Plus size={10} />
+                </button>
+              )}
+              {addingTag && (
+                <input
+                  autoFocus
+                  value={newTag}
+                  onChange={e => setNewTag(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && newTag.trim()) {
+                      onTagAdd(note.id, newTag.trim());
+                      setNewTag('');
+                      setAddingTag(false);
+                    }
+                    if (e.key === 'Escape') {
+                      setNewTag('');
+                      setAddingTag(false);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (newTag.trim()) onTagAdd(note.id, newTag.trim());
+                    setNewTag('');
+                    setAddingTag(false);
+                  }}
+                  placeholder="tag"
+                  style={{
+                    width: 60,
+                    background: 'transparent',
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: 4,
+                    padding: '2px 6px',
+                    color: colors.textPrimary,
+                    fontSize: 11,
+                    outline: 'none',
+                  }}
+                />
+              )}
               {note.date && (
                 <span
                   style={{

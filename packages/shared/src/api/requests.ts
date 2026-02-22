@@ -16,6 +16,8 @@ export interface AgentRequest {
   conversationHistory?: ConversationMessage[];
   confirmed?: string;
   context?: AgentContext;
+  customApiKey?: string;
+  customModel?: string;
 }
 
 export interface ParseContext {

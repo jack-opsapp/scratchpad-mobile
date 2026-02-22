@@ -35,7 +35,8 @@ import {
 } from 'lucide-react-native';
 import { useShareStore } from '../stores/shareStore';
 import { useAuthStore } from '../stores/authStore';
-import { colors, theme } from '../styles';
+import { colors as staticColors, theme } from '../styles';
+import { useTheme } from '../contexts/ThemeContext';
 import type { PermissionRole } from '@slate/shared';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -61,6 +62,7 @@ function RolePicker({
   value: PermissionRole;
   onChange: (role: PermissionRole) => void;
 }) {
+  const colors = useTheme();
   const [open, setOpen] = useState(false);
   const selected = ROLE_OPTIONS.find((o) => o.value === value);
 
@@ -72,7 +74,7 @@ function RolePicker({
         activeOpacity={0.7}
       >
         <Text style={pickerStyles.triggerText}>{selected?.label || value}</Text>
-        <ChevronDown size={12} color={colors.textMuted} />
+        <ChevronDown size={12} color={staticColors.textMuted} />
       </TouchableOpacity>
       {open && (
         <View style={pickerStyles.dropdown}>
@@ -89,7 +91,7 @@ function RolePicker({
               <Text
                 style={[
                   pickerStyles.optionText,
-                  value === opt.value && pickerStyles.optionSelected,
+                  value === opt.value && { color: colors.primary, fontFamily: theme.fonts.medium },
                 ]}
               >
                 {opt.label}
@@ -109,6 +111,7 @@ export default function ShareSheet({
   pageName,
 }: ShareSheetProps) {
   const insets = useSafeAreaInsets();
+  const colors = useTheme();
   const { user } = useAuthStore();
   const {
     myRole,
@@ -268,7 +271,7 @@ export default function ShareSheet({
               Share "{pageName}"
             </Text>
             <TouchableOpacity onPress={handleClose} activeOpacity={0.7}>
-              <X size={18} color={colors.textMuted} />
+              <X size={18} color={staticColors.textMuted} />
             </TouchableOpacity>
           </View>
 
@@ -281,7 +284,7 @@ export default function ShareSheet({
 
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator color={colors.textMuted} />
+              <ActivityIndicator color={staticColors.textMuted} />
             </View>
           ) : (
             <ScrollView
@@ -299,7 +302,7 @@ export default function ShareSheet({
                       value={email}
                       onChangeText={setEmail}
                       placeholder="email@example.com"
-                      placeholderTextColor={colors.textMuted}
+                      placeholderTextColor={staticColors.textMuted}
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoCorrect={false}
@@ -311,13 +314,14 @@ export default function ShareSheet({
                       <TouchableOpacity
                         style={[
                           styles.sendButton,
+                          { backgroundColor: colors.primary },
                           (!email.trim() || sending) && styles.sendButtonDisabled,
                         ]}
                         onPress={handleInvite}
                         disabled={!email.trim() || sending}
                         activeOpacity={0.7}
                       >
-                        <Send size={14} color={colors.bg} />
+                        <Send size={14} color={staticColors.bg} />
                         <Text style={styles.sendButtonText}>
                           {sending ? 'Sending...' : 'Send'}
                         </Text>
@@ -355,8 +359,8 @@ export default function ShareSheet({
                         </View>
 
                         {collab.role === 'owner' ? (
-                          <View style={styles.ownerBadge}>
-                            <Text style={styles.ownerBadgeText}>OWNER</Text>
+                          <View style={[styles.ownerBadge, { borderColor: colors.primary }]}>
+                            <Text style={[styles.ownerBadgeText, { color: colors.primary }]}>OWNER</Text>
                           </View>
                         ) : canManage && collab.userId !== user?.id ? (
                           <View style={styles.collabActions}>
@@ -373,7 +377,7 @@ export default function ShareSheet({
                               activeOpacity={0.7}
                               style={styles.trashButton}
                             >
-                              <Trash2 size={14} color={colors.textMuted} />
+                              <Trash2 size={14} color={staticColors.textMuted} />
                             </TouchableOpacity>
                           </View>
                         ) : (
@@ -444,16 +448,16 @@ export default function ShareSheet({
                           value={linkPassword}
                           onChangeText={setLinkPassword}
                           placeholder="Optional password"
-                          placeholderTextColor={colors.textMuted}
+                          placeholderTextColor={staticColors.textMuted}
                           secureTextEntry
                           autoCapitalize="none"
                         />
                         <TouchableOpacity
-                          style={styles.generateButton}
+                          style={[styles.generateButton, { backgroundColor: colors.primary }]}
                           onPress={() => createPublicLink(linkPassword || undefined)}
                           activeOpacity={0.7}
                         >
-                          <Link2 size={14} color={colors.bg} />
+                          <Link2 size={14} color={staticColors.bg} />
                           <Text style={styles.generateButtonText}>
                             Generate Public Link
                           </Text>
@@ -467,7 +471,7 @@ export default function ShareSheet({
                             {publicLink.is_active ? (
                               <Eye size={14} color={colors.primary} />
                             ) : (
-                              <EyeOff size={14} color={colors.textMuted} />
+                              <EyeOff size={14} color={staticColors.textMuted} />
                             )}
                             <Text
                               style={[
@@ -488,10 +492,10 @@ export default function ShareSheet({
                               value={publicLink.is_active}
                               onValueChange={() => togglePublicLink()}
                               trackColor={{
-                                false: colors.border,
+                                false: staticColors.border,
                                 true: colors.primary,
                               }}
-                              thumbColor={colors.textPrimary}
+                              thumbColor={staticColors.textPrimary}
                             />
                           </View>
                         </View>
@@ -512,7 +516,7 @@ export default function ShareSheet({
                               >
                                 slate.opsapp.co/public/{publicLink.token}
                               </Text>
-                              <Link2 size={14} color={colors.textMuted} />
+                              <Link2 size={14} color={staticColors.textMuted} />
                             </TouchableOpacity>
 
                             <View style={styles.divider} />
@@ -527,7 +531,7 @@ export default function ShareSheet({
                                   ? 'Update password'
                                   : 'Add password'
                               }
-                              placeholderTextColor={colors.textMuted}
+                              placeholderTextColor={staticColors.textMuted}
                               secureTextEntry
                               autoCapitalize="none"
                             />
@@ -556,7 +560,7 @@ export default function ShareSheet({
                               >
                                 <RefreshCw
                                   size={12}
-                                  color={colors.textMuted}
+                                  color={staticColors.textMuted}
                                 />
                                 <Text style={styles.smallButtonText}>
                                   Regenerate
@@ -596,9 +600,9 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     maxHeight: SCREEN_HEIGHT * 0.85,
-    backgroundColor: colors.bg,
+    backgroundColor: staticColors.bg,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
   },
   handleBar: {
     alignItems: 'center',
@@ -607,7 +611,7 @@ const styles = StyleSheet.create({
   handle: {
     width: 36,
     height: 4,
-    backgroundColor: colors.border,
+    backgroundColor: staticColors.border,
     borderRadius: 2,
   },
   header: {
@@ -617,19 +621,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   headerTitle: {
     fontFamily: theme.fonts.semibold,
     fontSize: 16,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     flex: 1,
     marginRight: 12,
   },
   errorBanner: {
     paddingVertical: 10,
     paddingHorizontal: 20,
-    backgroundColor: colors.error,
+    backgroundColor: staticColors.error,
   },
   errorText: {
     fontFamily: theme.fonts.regular,
@@ -650,30 +654,30 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontFamily: theme.fonts.semibold,
     fontSize: 11,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 1.5,
     marginBottom: 12,
   },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: staticColors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     padding: 16,
   },
   divider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: staticColors.border,
     marginVertical: 12,
   },
   textInput: {
     fontFamily: theme.fonts.regular,
     fontSize: 13,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bg,
+    borderColor: staticColors.border,
+    backgroundColor: staticColors.bg,
     marginBottom: 10,
   },
   inviteRow: {
@@ -685,7 +689,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.primary,
     paddingVertical: 10,
     paddingHorizontal: 16,
   },
@@ -695,7 +698,7 @@ const styles = StyleSheet.create({
   sendButtonText: {
     fontFamily: theme.fonts.semibold,
     fontSize: 13,
-    color: colors.bg,
+    color: staticColors.bg,
   },
   collabRow: {
     flexDirection: 'row',
@@ -710,16 +713,16 @@ const styles = StyleSheet.create({
   collabName: {
     fontFamily: theme.fonts.medium,
     fontSize: 13,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   youLabel: {
     fontFamily: theme.fonts.regular,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   collabEmail: {
     fontFamily: theme.fonts.regular,
     fontSize: 11,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     marginTop: 2,
   },
   collabActions: {
@@ -734,36 +737,34 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     paddingHorizontal: 8,
     borderWidth: 1,
-    borderColor: colors.primary,
   },
   ownerBadgeText: {
     fontFamily: theme.fonts.semibold,
     fontSize: 10,
-    color: colors.primary,
     letterSpacing: 1,
   },
   roleBadgeText: {
     fontFamily: theme.fonts.regular,
     fontSize: 11,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 0.5,
   },
   pendingBadge: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     paddingVertical: 1,
     paddingHorizontal: 5,
   },
   pendingBadgeText: {
     fontFamily: theme.fonts.semibold,
     fontSize: 9,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 0.5,
   },
   emptyText: {
     fontFamily: theme.fonts.regular,
     fontSize: 13,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     textAlign: 'center',
     paddingVertical: 8,
   },
@@ -778,18 +779,17 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
   },
   smallButtonText: {
     fontFamily: theme.fonts.medium,
     fontSize: 11,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   generateButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: colors.primary,
     paddingVertical: 10,
     paddingHorizontal: 16,
     alignSelf: 'flex-start',
@@ -797,7 +797,7 @@ const styles = StyleSheet.create({
   generateButtonText: {
     fontFamily: theme.fonts.semibold,
     fontSize: 13,
-    color: colors.bg,
+    color: staticColors.bg,
   },
   publicToggleRow: {
     flexDirection: 'row',
@@ -812,7 +812,7 @@ const styles = StyleSheet.create({
   publicToggleLabel: {
     fontFamily: theme.fonts.medium,
     fontSize: 13,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   publicToggleRight: {
     flexDirection: 'row',
@@ -822,7 +822,7 @@ const styles = StyleSheet.create({
   viewCount: {
     fontFamily: theme.fonts.regular,
     fontSize: 11,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   linkRow: {
     flexDirection: 'row',
@@ -831,13 +831,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bg,
+    borderColor: staticColors.border,
+    backgroundColor: staticColors.bg,
   },
   linkText: {
     fontFamily: theme.fonts.regular,
     fontSize: 11,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     flex: 1,
     marginRight: 8,
   },
@@ -856,14 +856,14 @@ const pickerStyles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bg,
+    borderColor: staticColors.border,
+    backgroundColor: staticColors.bg,
     minWidth: 110,
   },
   triggerText: {
     fontFamily: theme.fonts.regular,
     fontSize: 12,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     marginRight: 4,
   },
   dropdown: {
@@ -872,23 +872,19 @@ const pickerStyles = StyleSheet.create({
     left: 0,
     right: 0,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderColor: staticColors.border,
+    backgroundColor: staticColors.surface,
     zIndex: 10,
   },
   option: {
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   optionText: {
     fontFamily: theme.fonts.regular,
     fontSize: 12,
-    color: colors.textSecondary,
-  },
-  optionSelected: {
-    color: colors.primary,
-    fontFamily: theme.fonts.medium,
+    color: staticColors.textSecondary,
   },
 });

@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LogOut, User } from 'lucide-react-native';
 import { useAuthStore } from '../stores/authStore';
-import { colors, theme } from '../styles';
+import { colors as staticColors, theme } from '../styles';
 
 export default function SettingsScreen() {
   const { user, logout } = useAuthStore();
@@ -20,7 +20,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>ACCOUNT</Text>
           <View style={styles.card}>
             <View style={styles.cardRow}>
-              <User size={16} color={colors.textMuted} />
+              <User size={16} color={staticColors.textMuted} />
               <View style={styles.cardContent}>
                 <Text style={styles.label}>Email</Text>
                 <Text style={styles.value}>{user?.email || 'Not signed in'}</Text>
@@ -46,7 +46,7 @@ export default function SettingsScreen() {
           onPress={logout}
           activeOpacity={0.7}
         >
-          <LogOut size={16} color={colors.danger} />
+          <LogOut size={16} color={staticColors.danger} />
           <Text style={styles.signOutText}>SIGN OUT</Text>
         </TouchableOpacity>
       </View>
@@ -63,18 +63,18 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: staticColors.bg,
   },
   header: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   headerTitle: {
     fontSize: theme.fontSize.xs,
     fontWeight: theme.fontWeight.medium,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
@@ -88,14 +88,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: theme.fontSize.xs,
     fontWeight: theme.fontWeight.medium,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 1.5,
     marginBottom: theme.spacing.sm,
   },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: staticColors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     padding: theme.spacing.md,
   },
   cardRow: {
@@ -107,12 +107,12 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: theme.fontSize.sm,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     marginBottom: 2,
   },
   value: {
     fontSize: theme.fontSize.base,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
   },
   infoRow: {
     flexDirection: 'row',
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   },
   infoValue: {
     fontSize: theme.fontSize.base,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
   signOutButton: {
     flexDirection: 'row',
@@ -129,11 +129,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: theme.spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     marginTop: theme.spacing.md,
   },
   signOutText: {
-    color: colors.danger,
+    color: staticColors.danger,
     fontSize: theme.fontSize.xs,
     fontWeight: theme.fontWeight.medium,
     letterSpacing: 1.5,
@@ -143,17 +143,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: theme.spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: staticColors.border,
   },
   footerText: {
     fontSize: theme.fontSize.sm,
     fontWeight: theme.fontWeight.medium,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 2,
     marginBottom: theme.spacing.xs,
   },
   footerSubtext: {
     fontSize: theme.fontSize.xs,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
   },
 });

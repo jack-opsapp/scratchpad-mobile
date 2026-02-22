@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, FlatList, StyleSheet, BackHandler, RefreshControl, Text, Vibration, Dimensions, Alert, LayoutAnimation, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
+import { useSharedValue, runOnJS } from 'react-native-reanimated';
 import { MobileHeader, MobileSidebar, NoteCard, ChatPanel, MoveOverlay, SettingsDrawer, PageContextMenu, ShareSheet, SharedPageBanner, HomeView } from '../components';
 import type { DropTarget } from '../components';
 import type { NoteDensity } from '../components/NoteCard';
@@ -68,59 +68,44 @@ export default function MainScreen() {
   // Default page — apply once on first data load
   const hasAppliedDefault = useRef(false);
 
-  // Pinch gesture — live visual scaling + level change on release
-  const pinchScale = useSharedValue(1);
+  // Pinch gesture — threshold-based level changes during pinch, no visual zoom
+  const pinchBaseScale = useSharedValue(1);
 
-  const pinchAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pinchScale.value }],
-  }));
-
-  const handlePinchEnd = useCallback((scale: number) => {
+  const handlePinchLevelChange = useCallback((direction: number) => {
     if (!currentPageId) {
       // Home view: cycle zoom levels 0-3
-      if (scale > 1.3) {
-        const newIdx = Math.min(3, homeZoomIndexRef.current + 1);
-        if (newIdx !== homeZoomIndexRef.current) {
-          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-          homeZoomIndexRef.current = newIdx;
-          setHomeZoomIndex(newIdx);
-        }
-      } else if (scale < 0.7) {
-        const newIdx = Math.max(0, homeZoomIndexRef.current - 1);
-        if (newIdx !== homeZoomIndexRef.current) {
-          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-          homeZoomIndexRef.current = newIdx;
-          setHomeZoomIndex(newIdx);
-        }
+      const newIdx = Math.max(0, Math.min(3, homeZoomIndexRef.current + direction));
+      if (newIdx !== homeZoomIndexRef.current) {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        homeZoomIndexRef.current = newIdx;
+        setHomeZoomIndex(newIdx);
       }
     } else {
-      // Page view: change note density
-      if (scale > 1.3) {
-        const newIdx = Math.min(3, zoomIndexRef.current + 1);
-        if (newIdx !== zoomIndexRef.current) {
-          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-          zoomIndexRef.current = newIdx;
-          setZoomIndex(newIdx);
-        }
-      } else if (scale < 0.7) {
-        const newIdx = Math.max(0, zoomIndexRef.current - 1);
-        if (newIdx !== zoomIndexRef.current) {
-          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-          zoomIndexRef.current = newIdx;
-          setZoomIndex(newIdx);
-        }
+      // Page view: change note density 0-3
+      const newIdx = Math.max(0, Math.min(3, zoomIndexRef.current + direction));
+      if (newIdx !== zoomIndexRef.current) {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        zoomIndexRef.current = newIdx;
+        setZoomIndex(newIdx);
       }
     }
   }, [currentPageId]);
 
   const pinchGesture = Gesture.Pinch()
-    .onUpdate((event) => {
-      pinchScale.value = event.scale;
+    .onStart(() => {
+      pinchBaseScale.value = 1;
     })
-    .onEnd(() => {
-      const scale = pinchScale.value;
-      pinchScale.value = withTiming(1, { duration: 200 });
-      runOnJS(handlePinchEnd)(scale);
+    .onUpdate((event) => {
+      const relative = event.scale / pinchBaseScale.value;
+      if (relative > 1.4) {
+        // Spread fingers past threshold → expand one level
+        pinchBaseScale.value = event.scale;
+        runOnJS(handlePinchLevelChange)(1);
+      } else if (relative < 0.7) {
+        // Pinch fingers past threshold → contract one level
+        pinchBaseScale.value = event.scale;
+        runOnJS(handlePinchLevelChange)(-1);
+      }
     });
 
   useEffect(() => {
@@ -363,37 +348,6 @@ export default function MainScreen() {
     message: string,
     confirmedValue?: string | null,
   ) => {
-    // Check for API key before processing
-    if (!settings.custom_openai_key && !confirmedValue) {
-      Alert.alert(
-        'API Key Required',
-        'Please enter an OpenAI API key in Settings > Developer to use the chat assistant.',
-        [
-          {
-            text: 'What is an API Key?',
-            onPress: () => {
-              chatState.addAgentMessage(
-                'An OpenAI API key is a secret credential that allows this app to access OpenAI\'s AI models (like GPT-4). ' +
-                'You can get your API key from https://platform.openai.com/api-keys. ' +
-                'Once you have your key, go to Settings > Developer and paste it in the "OpenAI API Key" field. ' +
-                'Your key is stored securely on your device and sent directly to OpenAI with each request.',
-                'text_response'
-              );
-            },
-          },
-          {
-            text: 'Go to Settings',
-            onPress: () => setSettingsOpen(true),
-          },
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-        ]
-      );
-      return;
-    }
-
     if (!confirmedValue) {
       chatState.addUserMessage(message);
     }
@@ -408,7 +362,7 @@ export default function MainScreen() {
     await processQueue();
     chatState.setProcessing(false);
     chatState.compactHistory();
-  }, [chatState, processMessage, processQueue, settings.custom_openai_key, setSettingsOpen]);
+  }, [chatState, processMessage, processQueue]);
 
   // Handle user responses to clarifications/confirmations
   const handleUserResponse = useCallback(async (
@@ -883,7 +837,7 @@ export default function MainScreen() {
         {/* Main content: HomeView when no page selected, FlatList otherwise */}
         {!currentPageId ? (
           <GestureDetector gesture={pinchGesture}>
-            <Animated.View style={[{ flex: 1 }, pinchAnimatedStyle]}>
+            <View style={{ flex: 1 }}>
               <HomeView
                 pages={[...pages, ...sharedPages]}
                 notes={allNotes}
@@ -893,11 +847,11 @@ export default function MainScreen() {
                 onRefresh={refreshData}
                 bottomInset={insets.bottom}
               />
-            </Animated.View>
+            </View>
           </GestureDetector>
         ) : (
           <GestureDetector gesture={pinchGesture}>
-            <Animated.View style={[{ flex: 1 }, pinchAnimatedStyle]}>
+            <View style={{ flex: 1 }}>
               {/* Sort chip bar */}
               <ScrollView
                 horizontal
@@ -965,7 +919,7 @@ export default function MainScreen() {
                 showsVerticalScrollIndicator={false}
                 keyboardDismissMode="on-drag"
               />
-            </Animated.View>
+            </View>
           </GestureDetector>
         )}
 

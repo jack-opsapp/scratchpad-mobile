@@ -7,6 +7,7 @@ import {
   Pressable,
   StyleSheet,
   FlatList,
+  ScrollView,
   Dimensions,
   KeyboardAvoidingView,
   Platform,
@@ -104,6 +105,7 @@ const WaveformBar = memo(({
 
 const HEIGHTS = {
   inputOnly: 76,
+  apiKeyPrompt: 110,
   collapsed: 110,
   small: 250,
   medium: 400,
@@ -368,7 +370,7 @@ export default function ChatPanel({
 }: ChatPanelProps) {
   const insets = useSafeAreaInsets();
   const colors = useTheme();
-  const { settings } = useSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
 
   // Compute chat appearance colors from settings
   // Background: mode determines tint color, slider is opacity
@@ -379,6 +381,7 @@ export default function ChatPanel({
 
   const [height, setHeight] = useState(HEIGHTS.inputOnly);
   const [inputValue, setInputValue] = useState('');
+  const [apiKeyInput, setApiKeyInput] = useState('');
   const [isListening, setIsListening] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const listRef = useRef<FlatList>(null);
@@ -518,6 +521,15 @@ export default function ChatPanel({
     }
   }, [height, isDraggingSV, panelHeight]);
 
+  // Force API key prompt height when no key
+  useEffect(() => {
+    if (!hasApiKey) {
+      setHeight(HEIGHTS.apiKeyPrompt);
+    } else if (height === HEIGHTS.apiKeyPrompt) {
+      setHeight(HEIGHTS.inputOnly);
+    }
+  }, [hasApiKey]);
+
   // Auto-expand when messages arrive
   useEffect(() => {
     if (messages.length > 0 && height === HEIGHTS.inputOnly) {
@@ -573,6 +585,15 @@ export default function ChatPanel({
     opacity: panelOpacity.value,
     pointerEvents: panelOpacity.value === 0 ? 'none' as const : 'auto' as const,
   }));
+
+  const hasApiKey = !!settings.custom_openai_key;
+
+  const handleSaveApiKey = useCallback(() => {
+    const key = apiKeyInput.trim();
+    if (!key) return;
+    updateSetting('custom_openai_key', key);
+    setApiKeyInput('');
+  }, [apiKeyInput, updateSetting]);
 
   const handleSend = useCallback(async () => {
     if (!inputValue.trim()) return;
@@ -643,7 +664,12 @@ export default function ChatPanel({
 
         {/* Clarification options */}
         {isClarification && item.options && (
-          <View style={styles.actionButtons}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.actionButtonsScroll}
+            contentContainerStyle={styles.actionButtonsContent}
+          >
             {item.options.map((option) => (
               <TouchableOpacity
                 key={option.value}
@@ -654,7 +680,7 @@ export default function ChatPanel({
                 <Text style={styles.optionText}>{option.label}</Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
         )}
 
         {/* Confirmation buttons */}
@@ -699,6 +725,7 @@ export default function ChatPanel({
           styles.container,
           animatedPanelStyle,
           { bottom: insets.bottom + 12 },
+          !hasApiKey && { borderColor: colors.primary },
         ]}
       >
         {/* Blur background — wrapped to clip within border radius */}
@@ -750,6 +777,36 @@ export default function ChatPanel({
         )}
 
         {/* Input area */}
+        {!hasApiKey ? (
+          <View style={styles.apiKeyPrompt} onLayout={handleInputAreaLayout}>
+            <Text style={styles.apiKeyLabel}>
+              ENTER YOUR OPENAI API KEY IN SETTINGS / DEVELOPER, OR BELOW
+            </Text>
+            <View style={styles.apiKeyRow}>
+              <TextInput
+                value={apiKeyInput}
+                onChangeText={setApiKeyInput}
+                placeholder="sk-..."
+                placeholderTextColor={staticColors.textMuted}
+                style={styles.apiKeyInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+                returnKeyType="done"
+                onSubmitEditing={handleSaveApiKey}
+                inputAccessoryViewID={INPUT_ACCESSORY_ID}
+              />
+              <TouchableOpacity
+                style={[styles.apiKeySaveButton, { backgroundColor: apiKeyInput.trim() ? colors.primary : staticColors.border }]}
+                onPress={handleSaveApiKey}
+                disabled={!apiKeyInput.trim()}
+                activeOpacity={0.7}
+              >
+                <Check size={16} color={apiKeyInput.trim() ? '#000' : staticColors.textMuted} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
         <View style={styles.inputArea} onLayout={handleInputAreaLayout}>
           {/* Voice button */}
           <TouchableOpacity
@@ -810,6 +867,7 @@ export default function ChatPanel({
             </TouchableOpacity>
           </Animated.View>
         </View>
+        )}
       </Animated.View>
     </KeyboardAvoidingView>
     </>
@@ -897,12 +955,20 @@ const styles = StyleSheet.create({
     color: staticColors.error,
   },
   // Action buttons for clarification/confirmation
+  actionButtonsScroll: {
+    marginTop: 8,
+    marginLeft: 19,
+    flexGrow: 0,
+  },
+  actionButtonsContent: {
+    gap: 8,
+  },
   actionButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
     marginTop: 8,
-    marginLeft: 19, // align with message text (arrow width + gap)
+    marginLeft: 19,
   },
   optionButton: {
     borderWidth: 1,
@@ -962,6 +1028,42 @@ const styles = StyleSheet.create({
     color: staticColors.textMuted,
     letterSpacing: 1,
     textTransform: 'uppercase',
+  },
+  apiKeyPrompt: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 'auto',
+    gap: 8,
+  },
+  apiKeyLabel: {
+    fontFamily: theme.fonts.semibold,
+    fontSize: 10,
+    color: staticColors.textMuted,
+    letterSpacing: 1,
+    textAlign: 'center',
+  },
+  apiKeyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  apiKeyInput: {
+    flex: 1,
+    fontFamily: theme.fonts.regular,
+    fontSize: 14,
+    color: staticColors.textPrimary,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  apiKeySaveButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   inputArea: {
     flexDirection: 'row',

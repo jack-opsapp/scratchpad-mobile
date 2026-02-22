@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../stores/authStore';
-import { colors, theme } from '../styles';
+import { colors as staticColors, theme } from '../styles';
 
 export default function SignInScreen() {
   const { login, loading, error } = useAuthStore();
@@ -61,7 +61,7 @@ export default function SignInScreen() {
             activeOpacity={0.7}
           >
             {loading ? (
-              <ActivityIndicator color={colors.textPrimary} size="small" />
+              <ActivityIndicator color={staticColors.textPrimary} size="small" />
             ) : (
               <Text style={styles.buttonText}>SIGN IN WITH GOOGLE</Text>
             )}
@@ -78,7 +78,7 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: staticColors.bg,
   },
   content: {
     flex: 1,
@@ -93,26 +93,26 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: theme.fonts.semibold,
     fontSize: theme.fontSize['3xl'],
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     letterSpacing: 4,
     marginBottom: theme.spacing.sm,
   },
   subtitle: {
     fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.md,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 0.5,
   },
   errorContainer: {
     borderWidth: 1,
-    borderColor: colors.danger,
+    borderColor: staticColors.danger,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.lg,
   },
   errorText: {
     fontFamily: theme.fonts.regular,
-    color: colors.danger,
+    color: staticColors.danger,
     fontSize: theme.fontSize.sm,
     textAlign: 'center',
   },
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: staticColors.border,
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.xl,
     alignItems: 'center',
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontFamily: theme.fonts.medium,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     fontSize: theme.fontSize.sm,
     letterSpacing: 1.5,
   },
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: theme.spacing.xl,
     fontFamily: theme.fonts.regular,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     fontSize: theme.fontSize.xs,
     letterSpacing: 0.5,
     textTransform: 'uppercase',

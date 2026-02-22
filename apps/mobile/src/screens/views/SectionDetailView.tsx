@@ -6,7 +6,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useDataStore } from '../../stores/dataStore';
-import { colors, theme } from '../../styles';
+import { colors as staticColors, theme } from '../../styles';
 import type { Note } from '@slate/shared';
 import NoteCard from '../../components/NoteCard';
 
@@ -61,12 +61,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: staticColors.border,
   },
   noteCount: {
     fontFamily: theme.fonts.medium,
     fontSize: 11,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     letterSpacing: 1,
   },
   list: {
@@ -84,13 +84,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSize.lg,
-    color: colors.textPrimary,
+    color: staticColors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   emptySubtitle: {
     fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.md,
-    color: colors.textMuted,
+    color: staticColors.textMuted,
     textAlign: 'center',
   },
 });

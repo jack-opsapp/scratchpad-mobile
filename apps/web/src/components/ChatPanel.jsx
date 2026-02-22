@@ -36,7 +36,8 @@ const ChatPanel = forwardRef(function ChatPanel({
   onCancelPlan,
   sidebarWidth = 240,
   isMobile = false,
-  isOnline = true
+  isOnline = true,
+  pages = [],
 }, ref) {
   const [height, setHeight] = useState(isMobile ? MOBILE_HEIGHTS.inputOnly : COLLAPSED_HEIGHT);
   const [isDragging, setIsDragging] = useState(false);
@@ -55,6 +56,17 @@ const ChatPanel = forwardRef(function ChatPanel({
   const [reviseInput, setReviseInput] = useState('');
   const [isVoiceRecording, setIsVoiceRecording] = useState(false);
   const [audioWaveform, setAudioWaveform] = useState([]);
+  // Autofill suggestions for page/section routing
+  const [suggestions, setSuggestions] = useState([]); // array of name strings
+  const [suggestionIndex, setSuggestionIndex] = useState(0);
+  const [suggestionPrefix, setSuggestionPrefix] = useState('');
+  // Shift+Up prefix recall
+  const lastUsedPrefix = useRef('');
+  const [prefixShimmer, setPrefixShimmer] = useState(false);
+  // ESC double-tap tracking
+  const lastEscTime = useRef(0);
+  // Drag-note-to-chat state
+  const [isDragOver, setIsDragOver] = useState(false);
   const planContainerRef = useRef(null);
   const dragStartY = useRef(0);
   const dragStartHeight = useRef(0);
@@ -63,6 +75,53 @@ const ChatPanel = forwardRef(function ChatPanel({
   const inputRef = useRef(null);
   const reviseInputRef = useRef(null);
   const buttonRefs = useRef([]);
+
+  // Compute autofill suggestions based on input
+  useEffect(() => {
+    const val = inputValue;
+
+    // Match "-pagename/" or "-pagename/partial" → show sections for that page
+    const sectionMatch = val.match(/^-([^/]+)\/(.*)$/);
+    if (sectionMatch) {
+      const pageName = sectionMatch[1].trim().toLowerCase();
+      const page = pages.find(p => p.name.toLowerCase() === pageName);
+      if (page?.sections?.length) {
+        const partial = sectionMatch[2].toLowerCase();
+        const matches = page.sections
+          .map(s => s.name)
+          .filter(name => !partial || name.toLowerCase().startsWith(partial));
+        setSuggestions(matches);
+        setSuggestionPrefix(`-${sectionMatch[1]}/`);
+        setSuggestionIndex(0);
+        return;
+      }
+    }
+
+    // Match "-" or "-partial" → show page names
+    const pageMatch = val.match(/^-([^/]*)$/);
+    if (pageMatch) {
+      const partial = pageMatch[1].toLowerCase();
+      const matches = pages
+        .map(p => p.name)
+        .filter(name => !partial || name.toLowerCase().startsWith(partial));
+      setSuggestions(matches);
+      setSuggestionPrefix('-');
+      setSuggestionIndex(0);
+      return;
+    }
+
+    setSuggestions([]);
+  }, [inputValue, pages]);
+
+  const applyAutofill = (suggestion) => {
+    const isSectionMode = suggestionPrefix.includes('/');
+    const newValue = isSectionMode
+      ? `${suggestionPrefix}${suggestion}: `
+      : `-${suggestion}/`;
+    setInputValue(newValue);
+    setSuggestions([]);
+    inputRef.current?.focus();
+  };
 
   // Find the last unresponded message that needs action buttons
   const pendingMessage = messages.slice().reverse().find(
@@ -426,6 +485,16 @@ const ChatPanel = forwardRef(function ChatPanel({
   const handleSubmit = (e) => {
     e?.preventDefault();
     if (!inputValue.trim()) return;
+
+    // Capture page/section prefix for Shift+Up recall
+    const prefixMatch = inputValue.match(/^-?([^:/]+\/[^:]+):/);
+    if (prefixMatch) {
+      lastUsedPrefix.current = prefixMatch[0] + ' ';
+    } else {
+      const simpleMatch = inputValue.match(/^-?([^:/]+):/);
+      if (simpleMatch) lastUsedPrefix.current = simpleMatch[0] + ' ';
+    }
+
     // Add to history
     setInputHistory(prev => [...prev, inputValue.trim()]);
     setHistoryIndex(-1);
@@ -435,13 +504,45 @@ const ChatPanel = forwardRef(function ChatPanel({
   };
 
   const handleKeyDown = (e) => {
+    // Tab to accept autofill suggestion
+    if (e.key === 'Tab' && suggestions.length > 0) {
+      e.preventDefault();
+      applyAutofill(suggestions[suggestionIndex]);
+      return;
+    }
+
+    // ESC: double-tap clears input, single-tap dismisses suggestions
+    if (e.key === 'Escape') {
+      const now = Date.now();
+      if (now - lastEscTime.current < 400) {
+        e.preventDefault();
+        setInputValue('');
+        setSuggestions([]);
+        lastEscTime.current = 0;
+      } else {
+        lastEscTime.current = now;
+        if (suggestions.length > 0) setSuggestions([]);
+      }
+      return;
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
-    } else if (e.key === 'ArrowUp') {
-      // Navigate to previous input in history
+    } else if (e.key === 'ArrowUp' && e.shiftKey) {
+      // Shift+Up: recall last used page/section prefix
       e.preventDefault();
-      if (inputHistory.length > 0) {
+      if (lastUsedPrefix.current) {
+        setInputValue(lastUsedPrefix.current);
+        setPrefixShimmer(true);
+        setTimeout(() => setPrefixShimmer(false), 600);
+      }
+    } else if (e.key === 'ArrowUp') {
+      // Navigate autofill suggestions or input history
+      e.preventDefault();
+      if (suggestions.length > 0) {
+        setSuggestionIndex(i => (i - 1 + suggestions.length) % suggestions.length);
+      } else if (inputHistory.length > 0) {
         const newIndex = historyIndex === -1
           ? inputHistory.length - 1
           : Math.max(0, historyIndex - 1);
@@ -449,9 +550,11 @@ const ChatPanel = forwardRef(function ChatPanel({
         setInputValue(inputHistory[newIndex]);
       }
     } else if (e.key === 'ArrowDown') {
-      // Navigate to next input in history
+      // Navigate autofill suggestions or input history
       e.preventDefault();
-      if (historyIndex >= 0) {
+      if (suggestions.length > 0) {
+        setSuggestionIndex(i => (i + 1) % suggestions.length);
+      } else if (historyIndex >= 0) {
         const newIndex = historyIndex + 1;
         if (newIndex >= inputHistory.length) {
           setHistoryIndex(-1);
@@ -1096,7 +1199,29 @@ const ChatPanel = forwardRef(function ChatPanel({
             )}
           </div>
         ) : (
-          <div style={{ display: 'flex', gap: isMobile ? 10 : 10, alignItems: 'center' }}>
+          <div
+            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+            onDragLeave={() => setIsDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragOver(false);
+              const preview = e.dataTransfer.getData('notePreview');
+              if (preview) {
+                setInputValue(prev => `@[${preview}...] ${prev}`);
+                setPrefixShimmer(true);
+                setTimeout(() => setPrefixShimmer(false), 600);
+              }
+            }}
+            style={{
+              display: 'flex',
+              gap: isMobile ? 10 : 10,
+              alignItems: 'center',
+              position: 'relative',
+              border: isDragOver ? '1px dashed rgba(209,177,143,0.5)' : '1px dashed transparent',
+              borderRadius: 6,
+              transition: 'border-color 0.15s ease',
+            }}
+          >
             {/* Maximize button when minimized (desktop only) */}
             {isMinimized && !isMobile && (
               <button
@@ -1126,6 +1251,47 @@ const ChatPanel = forwardRef(function ChatPanel({
                 disabled={false}
                 isOnline={isOnline}
               />
+            )}
+            {/* Autofill suggestions dropdown */}
+            {suggestions.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                bottom: '100%',
+                left: 0,
+                right: 0,
+                background: 'rgba(15,15,15,0.92)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 8,
+                overflow: 'hidden',
+                zIndex: 200,
+                marginBottom: 4,
+                maxHeight: 180,
+                overflowY: 'auto',
+              }}>
+                {suggestions.map((s, i) => (
+                  <div
+                    key={s}
+                    onClick={() => applyAutofill(s)}
+                    style={{
+                      padding: '8px 12px',
+                      fontSize: 13,
+                      color: i === suggestionIndex ? '#fff' : 'rgba(255,255,255,0.45)',
+                      background: i === suggestionIndex ? 'rgba(255,255,255,0.06)' : 'transparent',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <span>{s}</span>
+                    {i === suggestionIndex && (
+                      <span style={{ fontSize: 11, opacity: 0.35 }}>{isMobile ? 'Tap' : 'Tab'}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
             {isVoiceRecording ? (
               /* Audio Waveform Visualization */
@@ -1169,11 +1335,12 @@ const ChatPanel = forwardRef(function ChatPanel({
                 placeholder={isMobile ? "Type or speak..." : (processing ? "Processing... (type next command)" : "Type a command...")}
                 style={{
                   flex: 1,
-                  background: 'transparent',
+                  background: prefixShimmer ? 'rgba(209,177,143,0.08)' : 'transparent',
                   border: 'none',
                   color: 'var(--chat-user-text-color, ' + colors.textPrimary + ')',
                   fontSize: isMobile ? 16 : 'var(--chat-font-input, 13px)', // 16px prevents iOS zoom on mobile
-                  outline: 'none'
+                  outline: 'none',
+                  transition: 'background 0.3s ease',
                 }}
               />
             )}
