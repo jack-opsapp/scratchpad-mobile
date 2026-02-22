@@ -9,7 +9,6 @@
     "build:shared": "npm run build -w @slate/shared",
     "build:api-client": "npm run build -w @slate/api-client",
     "build:packages": "npm run build:shared && npm run build:api-client",
-    "dev:web": "npm run dev -w @slate/web",
     "dev:mobile": "npm run start -w @slate/mobile",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"
@@ -26,8 +25,6 @@
   "dependencies": {
     "@react-native-community/blur": "^4.4.1",
     "@react-native-voice/voice": "^3.2.4",
-    "cookie": "^1.1.1",
-    "hoist-non-react-statics": "^3.3.2",
-    "set-cookie-parser": "^3.0.1"
+    "hoist-non-react-statics": "^3.3.2"
   }
 }
