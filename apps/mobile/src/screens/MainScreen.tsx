@@ -869,7 +869,7 @@ export default function MainScreen() {
                     key={chip.key}
                     style={[
                       styles.sortChip,
-                      sortMode === chip.key && !customSortOrder && styles.sortChipActive,
+                      sortMode === chip.key && !customSortOrder && { borderColor: colors.primary },
                     ]}
                     onPress={() => {
                       setSortMode(chip.key);
@@ -880,7 +880,7 @@ export default function MainScreen() {
                     <Text
                       style={[
                         styles.sortChipText,
-                        sortMode === chip.key && !customSortOrder && styles.sortChipTextActive,
+                        sortMode === chip.key && !customSortOrder && { color: colors.primary },
                       ]}
                     >
                       {chip.label}
@@ -889,11 +889,11 @@ export default function MainScreen() {
                 ))}
                 {customSortOrder && (
                   <TouchableOpacity
-                    style={[styles.sortChip, styles.sortChipActive]}
+                    style={[styles.sortChip, { borderColor: colors.primary }]}
                     onPress={() => setCustomSortOrder(null)}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.sortChipText, styles.sortChipTextActive]}>
+                    <Text style={[styles.sortChipText, { color: colors.primary }]}>
                       AI SORT ✕
                     </Text>
                   </TouchableOpacity>
@@ -1020,16 +1020,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
   },
-  sortChipActive: {
-    borderColor: staticColors.primary,
-  },
   sortChipText: {
     fontFamily: theme.fonts.medium,
     fontSize: 11,
     color: staticColors.textMuted,
     letterSpacing: 0.5,
-  },
-  sortChipTextActive: {
-    color: staticColors.primary,
   },
 });

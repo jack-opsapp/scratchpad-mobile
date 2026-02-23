@@ -14,6 +14,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { colors as staticColors, theme } from '../styles';
+import { useTheme } from '../contexts/ThemeContext';
 import type { Note, PageWithSections } from '@slate/shared';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -52,6 +53,7 @@ const PageCard = memo(function PageCard({
 }) {
   const scale = useSharedValue(1);
   const [pressed, setPressed] = useState(false);
+  const themeColors = useTheme();
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -70,11 +72,11 @@ const PageCard = memo(function PageCard({
   return (
     <Animated.View style={[{ width: cardWidth }, animStyle]}>
       <TouchableOpacity
-        style={[styles.card, pressed && styles.cardPressed]}
+        style={[styles.card, pressed && { borderColor: themeColors.primary }]}
         onPress={handlePress}
         activeOpacity={1}
       >
-        <Text style={styles.cardTitle} numberOfLines={1}>
+        <Text style={[styles.cardTitle, { color: themeColors.primary }]} numberOfLines={1}>
           {card.pageName.toUpperCase()}
         </Text>
 
@@ -258,13 +260,9 @@ const styles = StyleSheet.create({
     minHeight: 120,
     justifyContent: 'space-between',
   },
-  cardPressed: {
-    borderColor: staticColors.primary,
-  },
   cardTitle: {
     fontFamily: theme.fonts.semibold,
     fontSize: 11,
-    color: staticColors.primary,
     letterSpacing: 1.5,
     marginBottom: 12,
   },

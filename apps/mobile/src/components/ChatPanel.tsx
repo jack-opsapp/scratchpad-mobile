@@ -74,10 +74,12 @@ const WaveformBar = memo(({
   index,
   waveformTime,
   volumeLevel,
+  accentColor,
 }: {
   index: number;
   waveformTime: Animated.SharedValue<number>;
   volumeLevel: Animated.SharedValue<number>;
+  accentColor: string;
 }) => {
   const animStyle = useAnimatedStyle(() => {
     const t = waveformTime.value;
@@ -94,7 +96,7 @@ const WaveformBar = memo(({
     return {
       height,
       width: WAVEFORM_BAR_WIDTH,
-      backgroundColor: staticColors.primary,
+      backgroundColor: accentColor,
       borderRadius: WAVEFORM_BAR_WIDTH / 2,
       marginHorizontal: WAVEFORM_BAR_GAP / 2,
     };
@@ -139,11 +141,11 @@ function ActionIcon({ type }: { type: PlanAction['type'] }) {
   }
 }
 
-function getStatusDotColor(status: PlanGroupStatus, execState?: string): string {
+function getStatusDotColor(status: PlanGroupStatus, execState?: string, accentColor?: string): string {
   if (execState === 'complete') return staticColors.success;
   if (execState === 'executing') return '#4a9eff';
   switch (status) {
-    case 'approved': return staticColors.primary;
+    case 'approved': return accentColor || staticColors.primary;
     case 'skipped': return staticColors.textMuted;
     default: return staticColors.border;
   }
@@ -221,7 +223,7 @@ function PlanCard({
                 onPress={() => toggleExpand(gi)}
                 activeOpacity={0.7}
               >
-                <View style={[planStyles.statusDot, { backgroundColor: getStatusDotColor(status, isComplete ? 'complete' : isExecuting ? 'executing' : undefined) }]} />
+                <View style={[planStyles.statusDot, { backgroundColor: getStatusDotColor(status, isComplete ? 'complete' : isExecuting ? 'executing' : undefined, colors.primary) }]} />
                 <Text
                   style={[
                     planStyles.groupDescription,
@@ -855,7 +857,7 @@ export default function ChatPanel({
           <Animated.View style={[styles.recordingOverlay, recordingOverlayStyle]}>
             <View style={styles.waveformContainer}>
               {Array.from({ length: WAVEFORM_BAR_COUNT }, (_, i) => (
-                <WaveformBar key={i} index={i} waveformTime={waveformTime} volumeLevel={volumeLevel} />
+                <WaveformBar key={i} index={i} waveformTime={waveformTime} volumeLevel={volumeLevel} accentColor={colors.primary} />
               ))}
             </View>
             <TouchableOpacity
@@ -937,7 +939,6 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   arrowAgent: {
-    color: staticColors.primary,
   },
   messageText: {
     fontFamily: theme.fonts.regular,
@@ -984,7 +985,6 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     borderWidth: 1,
-    borderColor: staticColors.primary,
     borderRadius: 6,
     paddingVertical: 8,
     paddingHorizontal: 20,
@@ -992,7 +992,6 @@ const styles = StyleSheet.create({
   confirmText: {
     fontFamily: theme.fonts.medium,
     fontSize: 12,
-    color: staticColors.primary,
   },
   cancelButton: {
     borderWidth: 1,
@@ -1110,7 +1109,6 @@ const styles = StyleSheet.create({
   doneButton: {
     fontFamily: theme.fonts.semibold,
     fontSize: 15,
-    color: staticColors.primary,
     paddingVertical: 4,
     paddingHorizontal: 8,
   },
@@ -1222,7 +1220,6 @@ const planStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     borderWidth: 1,
-    borderColor: staticColors.primary,
     borderRadius: 6,
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -1230,7 +1227,6 @@ const planStyles = StyleSheet.create({
   approveText: {
     fontFamily: theme.fonts.medium,
     fontSize: 11,
-    color: staticColors.primary,
   },
   skipButton: {
     flexDirection: 'row',
@@ -1256,7 +1252,6 @@ const planStyles = StyleSheet.create({
     fontSize: 11,
   },
   statusApproved: {
-    color: staticColors.primary,
   },
   statusSkippedText: {
     color: staticColors.textMuted,
@@ -1280,7 +1275,6 @@ const planStyles = StyleSheet.create({
     color: staticColors.textPrimary,
   },
   executeButton: {
-    backgroundColor: staticColors.primary,
     borderRadius: 6,
     paddingVertical: 8,
     paddingHorizontal: 14,

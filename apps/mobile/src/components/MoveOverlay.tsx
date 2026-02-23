@@ -130,6 +130,8 @@ export default function MoveOverlay({
             {
               left: Math.max(12, Math.min(dragX - 100, SCREEN_WIDTH - PANEL_WIDTH - 220)),
               top: dragY - 24,
+              borderColor: colors.primary,
+              shadowColor: colors.primary,
             },
           ]}
         >
@@ -196,12 +198,10 @@ const styles = StyleSheet.create({
     width: 200,
     backgroundColor: staticColors.surface,
     borderWidth: 1,
-    borderColor: staticColors.primary,
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 14,
     zIndex: 10,
-    shadowColor: staticColors.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
