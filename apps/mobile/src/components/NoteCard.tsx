@@ -35,6 +35,7 @@ interface NoteCardProps {
   onToggle?: (noteId: string) => void;
   onDelete?: (noteId: string) => void;
   onEdit?: (noteId: string) => void;
+  onDatePress?: (note: Note) => void;
   onDragStart?: (noteId: string, absoluteY: number) => void;
   onDragMove?: (absoluteX: number, absoluteY: number) => void;
   onDragEnd?: (absoluteX: number, absoluteY: number) => void;
@@ -70,6 +71,7 @@ export default function NoteCard({
   onToggle,
   onDelete,
   onEdit,
+  onDatePress,
   onDragStart,
   onDragMove,
   onDragEnd,
@@ -238,7 +240,18 @@ export default function NoteCard({
                       </View>
                     ))}
                     {note.date && (
-                      <Text style={styles.dateText}>{note.date}</Text>
+                      <TouchableOpacity
+                        onPress={() => onDatePress?.(note)}
+                        activeOpacity={onDatePress ? 0.7 : 1}
+                      >
+                        <Text style={styles.dateText}>
+                          {note.date}
+                          {note.start_time && (() => {
+                            const t = new Date(note.start_time!);
+                            return ` \u00B7 ${t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+                          })()}
+                        </Text>
+                      </TouchableOpacity>
                     )}
                   </View>
                 )}

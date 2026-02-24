@@ -2,6 +2,7 @@
 
 #import <React/RCTBundleURLProvider.h>
 #import <WatchConnectivity/WatchConnectivity.h>
+@import ExpoModulesCore;
 #import "SlateApp-Swift.h"
 
 @implementation AppDelegate

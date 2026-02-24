@@ -64,12 +64,20 @@ export interface UserSettings {
   custom_openai_key: string | null;
   custom_openai_model: string | null;
 
+  // Calendar
+  calendar_sync_enabled: boolean;
+  calendar_default_reminder: number; // minutes (0 = none)
+
   // Onboarding
   demo_complete: boolean;
 }
 
 // Settings that are stored locally only (not synced to Supabase)
-const LOCAL_ONLY_KEYS: Set<keyof UserSettings> = new Set(['demo_complete']);
+const LOCAL_ONLY_KEYS: Set<keyof UserSettings> = new Set([
+  'demo_complete',
+  'calendar_sync_enabled',
+  'calendar_default_reminder',
+]);
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme: 'dark',
@@ -99,6 +107,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   require_invite_approval: false,
   custom_openai_key: null,
   custom_openai_model: 'gpt-4.1-mini',
+  calendar_sync_enabled: false,
+  calendar_default_reminder: 15,
   demo_complete: false,
 };
 
@@ -174,6 +184,8 @@ export const useSettingsStore = create<SettingsState>()(
               require_invite_approval: data.require_invite_approval ?? DEFAULT_SETTINGS.require_invite_approval,
               custom_openai_key: data.custom_openai_key,
               custom_openai_model: data.custom_openai_model,
+              calendar_sync_enabled: DEFAULT_SETTINGS.calendar_sync_enabled,
+              calendar_default_reminder: DEFAULT_SETTINGS.calendar_default_reminder,
               demo_complete: data.demo_complete ?? DEFAULT_SETTINGS.demo_complete,
             };
             set({ settings, loading: false });

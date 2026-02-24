@@ -24,6 +24,9 @@ export type FunctionName =
   | 'update_note'
   | 'delete_note'
   | 'move_note'
+  // Calendar operations
+  | 'schedule_note'
+  | 'check_schedule'
   // Bulk operations
   | 'bulk_update_notes'
   | 'bulk_delete_notes'
@@ -310,6 +313,45 @@ export const FUNCTION_DEFINITIONS = [
           to_page_name: { type: 'string', description: 'Page name (if using section_name)' },
         },
         required: ['note_id'],
+      },
+    },
+  },
+
+  // === CALENDAR OPERATIONS ===
+  {
+    type: 'function' as const,
+    function: {
+      name: 'schedule_note',
+      description: 'Schedule a note with a specific date and time. Creates a calendar event. Use when the user mentions a meeting, appointment, or deadline with a time.',
+      parameters: {
+        type: 'object',
+        properties: {
+          content: { type: 'string', description: 'Note content' },
+          section_id: { type: 'string', description: 'Target section ID' },
+          section_name: { type: 'string', description: 'Target section name' },
+          page_name: { type: 'string', description: 'Page name (if using section_name)' },
+          date: { type: 'string', description: 'Date in "Mon D" format (e.g., "Jan 15")' },
+          start_time: { type: 'string', description: 'Start time as ISO 8601 string (e.g., "2026-01-15T14:00:00.000Z")' },
+          end_time: { type: 'string', description: 'End time as ISO 8601 string. Defaults to 1 hour after start_time if not provided.' },
+          reminder_minutes: { type: 'number', description: 'Minutes before event to send reminder (default 15). Use 0 for no reminder.' },
+          tags: { type: 'array', items: { type: 'string' }, description: 'Tags (1-3 recommended)' },
+        },
+        required: ['content', 'start_time'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'check_schedule',
+      description: 'Check for scheduling conflicts in a time range. Returns events from all calendars that overlap with the given range.',
+      parameters: {
+        type: 'object',
+        properties: {
+          start_time: { type: 'string', description: 'Start of range as ISO 8601 string' },
+          end_time: { type: 'string', description: 'End of range as ISO 8601 string' },
+        },
+        required: ['start_time', 'end_time'],
       },
     },
   },

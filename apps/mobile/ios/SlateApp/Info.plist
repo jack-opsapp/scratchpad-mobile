@@ -44,6 +44,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Slate syncs your dated notes to your calendar and detects scheduling conflicts.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Slate needs microphone access for voice input.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

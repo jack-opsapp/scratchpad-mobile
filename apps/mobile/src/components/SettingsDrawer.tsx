@@ -54,6 +54,8 @@ import {
   BookOpen,
   Users,
   UserCheck,
+  CalendarDays,
+  Bell,
 } from 'lucide-react-native';
 import { supabase } from '../services/supabase';
 import { API_URL } from '@env';
@@ -62,6 +64,8 @@ const API_BASE = API_URL || 'https://slate.opsapp.co';
 import { useAuthStore } from '../stores/authStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useDataStore } from '../stores/dataStore';
+import { useCalendarStore } from '../stores/calendarStore';
+import { hasPermission as checkCalendarPermission } from '../services/calendarService';
 import { colors as staticColors, theme } from '../styles';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -322,7 +326,189 @@ function BrightnessSlider({
   );
 }
 
-type SettingsSection = 'appearance' | 'ai' | 'content' | 'data' | 'developer' | 'app' | null;
+type SettingsSection = 'appearance' | 'ai' | 'content' | 'data' | 'calendar' | 'developer' | 'app' | null;
+
+// Calendar settings section
+function CalendarSection() {
+  const colors = useTheme();
+  const { settings, updateSetting } = useSettingsStore();
+  const { hasPermission, syncing, initialize, bulkSync } = useCalendarStore();
+  const { notes } = useDataStore();
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
+  const [permissionChecked, setPermissionChecked] = useState(false);
+
+  // Check permission status on mount
+  useEffect(() => {
+    (async () => {
+      const { hasPermission: hp } = useCalendarStore.getState();
+      if (!hp) {
+        const granted = await checkCalendarPermission();
+        useCalendarStore.setState({ hasPermission: granted });
+      }
+      setPermissionChecked(true);
+    })();
+  }, []);
+
+  const syncableCount = notes.filter((n) => n.start_time && !n.calendar_event_id).length;
+
+  const handleToggleSync = async (enabled: boolean) => {
+    if (enabled) {
+      const ok = await initialize();
+      if (!ok) {
+        Alert.alert('Permission Required', 'Calendar access was denied. Enable it in Settings > Slate > Calendars.');
+        return;
+      }
+    }
+    updateSetting('calendar_sync_enabled', enabled);
+  };
+
+  const handleBulkSync = async () => {
+    const toSync = notes.filter((n) => n.start_time && !n.calendar_event_id);
+    if (toSync.length === 0) {
+      Alert.alert('Nothing to Sync', 'All dated notes are already synced.');
+      return;
+    }
+
+    setBulkProgress({ done: 0, total: toSync.length });
+    const synced = await bulkSync(toSync, (done, total) => {
+      setBulkProgress({ done, total });
+    });
+    setBulkProgress(null);
+    Alert.alert('Sync Complete', `${synced} note${synced !== 1 ? 's' : ''} synced to calendar.`);
+  };
+
+  const reminderOptions = [
+    { label: 'None', value: 0 },
+    { label: '5 min', value: 5 },
+    { label: '15 min', value: 15 },
+    { label: '30 min', value: 30 },
+    { label: '1 hr', value: 60 },
+  ];
+
+  return (
+    <View style={styles.section}>
+      {/* Sync Toggle */}
+      <Text style={styles.sectionLabel}>SYNC</Text>
+      <View style={styles.toggleRow}>
+        <View style={styles.toggleLeft}>
+          <CalendarDays size={16} color={staticColors.textMuted} />
+          <View style={styles.toggleLabelContainer}>
+            <Text style={styles.toggleLabel}>Sync to Calendar</Text>
+            <Text style={styles.toggleDescription}>
+              Push dated notes to iOS Calendar
+            </Text>
+          </View>
+        </View>
+        <Switch
+          value={settings.calendar_sync_enabled}
+          onValueChange={handleToggleSync}
+          trackColor={{ false: staticColors.border, true: colors.primary }}
+          thumbColor={staticColors.textPrimary}
+        />
+      </View>
+
+      {/* Permission status */}
+      {permissionChecked && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, marginBottom: 8 }}>
+          <View style={{
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+            backgroundColor: hasPermission ? staticColors.success : staticColors.textMuted,
+          }} />
+          <Text style={{ fontFamily: theme.fonts.regular, fontSize: 11, color: staticColors.textMuted }}>
+            {hasPermission ? 'Calendar access granted' : 'Calendar access not granted'}
+          </Text>
+        </View>
+      )}
+
+      <View style={styles.divider} />
+
+      {/* Default Reminder */}
+      <Text style={styles.sectionLabel}>DEFAULT REMINDER</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+        <Bell size={14} color={staticColors.textMuted} />
+        <Text style={{ fontFamily: theme.fonts.regular, fontSize: 12, color: staticColors.textMuted }}>
+          Applied to new scheduled notes
+        </Text>
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+        {reminderOptions.map((opt) => (
+          <TouchableOpacity
+            key={opt.value}
+            onPress={() => updateSetting('calendar_default_reminder', opt.value)}
+            style={{
+              paddingVertical: 8,
+              paddingHorizontal: 14,
+              borderWidth: 1,
+              borderColor: settings.calendar_default_reminder === opt.value ? colors.primary : staticColors.border,
+              backgroundColor: settings.calendar_default_reminder === opt.value ? `${colors.primary}20` : 'transparent',
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={{
+              fontFamily: settings.calendar_default_reminder === opt.value ? theme.fonts.semibold : theme.fonts.regular,
+              fontSize: 13,
+              color: settings.calendar_default_reminder === opt.value ? colors.primary : staticColors.textSecondary,
+            }}>
+              {opt.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={styles.divider} />
+
+      {/* Bulk Sync */}
+      <Text style={styles.sectionLabel}>BULK SYNC</Text>
+      <Text style={{ fontFamily: theme.fonts.regular, fontSize: 12, color: staticColors.textMuted, marginBottom: 10, lineHeight: 18 }}>
+        Sync all existing dated notes that aren't yet in your calendar.
+      </Text>
+
+      {bulkProgress ? (
+        <View style={{
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+          borderWidth: 1,
+          borderColor: staticColors.border,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+        }}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={{ fontFamily: theme.fonts.regular, fontSize: 13, color: staticColors.textSecondary }}>
+            Syncing {bulkProgress.done} / {bulkProgress.total}...
+          </Text>
+        </View>
+      ) : (
+        <TouchableOpacity
+          onPress={handleBulkSync}
+          disabled={!settings.calendar_sync_enabled || syncableCount === 0}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            paddingVertical: 10,
+            borderWidth: 1,
+            borderColor: settings.calendar_sync_enabled && syncableCount > 0 ? staticColors.border : `${staticColors.border}60`,
+            opacity: settings.calendar_sync_enabled && syncableCount > 0 ? 1 : 0.5,
+          }}
+          activeOpacity={0.7}
+        >
+          <CalendarDays size={14} color={settings.calendar_sync_enabled && syncableCount > 0 ? staticColors.textPrimary : staticColors.textMuted} />
+          <Text style={{
+            fontFamily: theme.fonts.medium,
+            fontSize: 13,
+            color: settings.calendar_sync_enabled && syncableCount > 0 ? staticColors.textPrimary : staticColors.textMuted,
+          }}>
+            Sync {syncableCount} Note{syncableCount !== 1 ? 's' : ''} to Calendar
+          </Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
 
 export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
   const insets = useSafeAreaInsets();
@@ -754,6 +940,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
               {currentSection === 'content' && 'CONTENT'}
               {currentSection === 'data' && 'DATA & PRIVACY'}
               {currentSection === 'developer' && 'DEVELOPER'}
+              {currentSection === 'calendar' && 'CALENDAR'}
               {currentSection === 'app' && 'APP'}
               {!currentSection && 'SETTINGS'}
             </Text>
@@ -888,6 +1075,18 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                   >
                     <Database size={20} color={staticColors.textMuted} />
                     <Text style={styles.menuItemText}>Data & Privacy</Text>
+                    <ChevronRight size={18} color={staticColors.textMuted} />
+                  </TouchableOpacity>
+
+                  <View style={styles.divider} />
+
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => setCurrentSection('calendar')}
+                    activeOpacity={0.7}
+                  >
+                    <CalendarDays size={20} color={staticColors.textMuted} />
+                    <Text style={styles.menuItemText}>Calendar</Text>
                     <ChevronRight size={18} color={staticColors.textMuted} />
                   </TouchableOpacity>
 
@@ -1513,6 +1712,11 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                 </View>
               </View>
             </View>
+            )}
+
+            {/* ===== CALENDAR ===== */}
+            {currentSection === 'calendar' && (
+            <CalendarSection />
             )}
 
             {/* ===== DEVELOPER ===== */}

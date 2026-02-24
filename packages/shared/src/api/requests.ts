@@ -42,13 +42,16 @@ export interface PlanGroup {
 }
 
 export interface PlanAction {
-  type: 'create_page' | 'create_section' | 'create_note' | 'delete_page' | 'delete_section' | 'delete_notes';
+  type: 'create_page' | 'create_section' | 'create_note' | 'schedule_note' | 'delete_page' | 'delete_section' | 'delete_notes';
   name?: string;
   pageName?: string;
   sectionName?: string;
   content?: string;
   tags?: string[];
   date?: string;
+  start_time?: string;
+  end_time?: string;
+  reminder_minutes?: number;
   filter?: NoteFilter;
   description?: string;
 }

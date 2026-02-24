@@ -6,6 +6,10 @@ export interface Note {
   completed_by_user_id: string | null;
   completed_at: string | null;
   date: string | null; // Format: "Jan 15"
+  start_time: string | null; // ISO 8601
+  end_time: string | null; // ISO 8601
+  calendar_event_id: string | null;
+  reminder_minutes: number | null;
   tags: string[];
   created_by_user_id: string | null;
   embedding?: number[]; // 1536-dimensional vector
@@ -20,6 +24,9 @@ export interface CreateNoteInput {
   page_name?: string;
   tags?: string[];
   date?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  reminder_minutes?: number | null;
 }
 
 export interface UpdateNoteInput {
@@ -29,6 +36,9 @@ export interface UpdateNoteInput {
   add_tags?: string[];
   remove_tags?: string[];
   date?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  reminder_minutes?: number | null;
   completed?: boolean;
 }
 

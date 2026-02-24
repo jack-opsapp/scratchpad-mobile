@@ -9,6 +9,8 @@ import type { NoteDensity } from '../components/NoteCard';
 import { useDataStore } from '../stores/dataStore';
 import { useAuthStore } from '../stores/authStore';
 import { useSettingsStore } from '../stores/settingsStore';
+import { useCalendarStore } from '../stores/calendarStore';
+import DateTimePicker from '../components/DateTimePicker';
 import { useChatState } from '../hooks/useChatState';
 import { apiClient } from '../services/api';
 import { colors as staticColors, theme } from '../styles';
@@ -28,6 +30,7 @@ export default function MainScreen() {
   const { settings } = useSettingsStore();
   const chatState = useChatState();
   const colors = useTheme();
+  const { syncNote, unsyncNote } = useCalendarStore();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -39,6 +42,9 @@ export default function MainScreen() {
     type: 'clarification' | 'confirmation';
     data: AgentResponse;
   } | null>(null);
+
+  // DateTimePicker state
+  const [datePickerNote, setDatePickerNote] = useState<Note | null>(null);
 
   // Drag-to-move state
   const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null);
@@ -577,7 +583,8 @@ export default function MainScreen() {
           results.push(`Created section "${sectionName}"`);
           break;
         }
-        case 'create_note': {
+        case 'create_note':
+        case 'schedule_note': {
           const content = action.content || '';
           // Resolve section: use explicit sectionName, or fall back to last created section
           let sectionId = updatedContext.lastSectionId;
@@ -593,17 +600,35 @@ export default function MainScreen() {
             }
           }
           if (!sectionId) throw new Error('No section found for note');
-          const { error } = await supabase
+          const noteInsert: Record<string, unknown> = {
+            content,
+            section_id: sectionId,
+            tags: action.tags || [],
+            date: action.date || null,
+            created_by_user_id: user!.id,
+          };
+          // Calendar fields for schedule_note
+          if (action.start_time) noteInsert.start_time = action.start_time;
+          if (action.end_time) noteInsert.end_time = action.end_time;
+          if (action.reminder_minutes != null) noteInsert.reminder_minutes = action.reminder_minutes;
+
+          const { data: createdNote, error } = await supabase
             .from('notes')
-            .insert({
-              content,
-              section_id: sectionId,
-              tags: action.tags || [],
-              date: action.date || null,
-              created_by_user_id: user!.id,
-            });
+            .insert(noteInsert)
+            .select()
+            .single();
           if (error) throw new Error(`Failed to create note: ${error.message}`);
-          results.push(`Added note`);
+
+          // Auto-sync to calendar if note has start_time and calendar sync is enabled
+          if (createdNote?.start_time && settings.calendar_sync_enabled) {
+            try {
+              await syncNote(createdNote as Note);
+            } catch (e) {
+              console.log('[MainScreen] Calendar sync failed for new note:', e);
+            }
+          }
+
+          results.push(action.type === 'schedule_note' ? `Scheduled note` : `Added note`);
           break;
         }
         case 'delete_page': {
@@ -645,6 +670,20 @@ export default function MainScreen() {
             if (error) throw new Error(`Failed to delete notes: ${error.message}`);
           }
           results.push('Deleted notes');
+          break;
+        }
+        case 'check_schedule': {
+          if (action.start_time && action.end_time) {
+            const conflicts = await useCalendarStore.getState().checkConflicts(
+              action.start_time as string,
+              action.end_time as string,
+            );
+            if (conflicts.length > 0) {
+              results.push(`Found ${conflicts.length} conflict(s): ${conflicts.map(c => c.title).join(', ')}`);
+            } else {
+              results.push('No scheduling conflicts found');
+            }
+          }
           break;
         }
       }
@@ -782,11 +821,61 @@ export default function MainScreen() {
       completed_by_user_id: nowCompleted ? user?.id ?? null : null,
       completed_at: nowCompleted ? new Date().toISOString() : null,
     });
-  }, [allNotes, updateNote, user]);
+    // Remove calendar event when completing
+    if (nowCompleted && note.calendar_event_id) {
+      unsyncNote(note);
+    }
+  }, [allNotes, updateNote, user, unsyncNote]);
 
   const handleNoteDelete = useCallback((noteId: string) => {
+    const note = allNotes.find((n) => n.id === noteId);
+    if (note?.calendar_event_id) {
+      unsyncNote(note);
+    }
     removeNote(noteId);
-  }, [removeNote]);
+  }, [allNotes, removeNote, unsyncNote]);
+
+  // DateTimePicker handlers
+  const handleDatePress = useCallback((note: Note) => {
+    setDatePickerNote(note);
+  }, []);
+
+  const handleDateTimeSave = useCallback(async (updates: {
+    date: string | null;
+    start_time: string | null;
+    end_time: string | null;
+    reminder_minutes: number | null;
+    syncToCalendar: boolean;
+  }) => {
+    if (!datePickerNote) return;
+    const noteId = datePickerNote.id;
+
+    // Update note in store (persists to Supabase)
+    updateNote(noteId, {
+      date: updates.date,
+      start_time: updates.start_time,
+      end_time: updates.end_time,
+      reminder_minutes: updates.reminder_minutes,
+    });
+
+    // Sync to calendar if requested
+    if (updates.syncToCalendar && updates.start_time) {
+      const updatedNote = {
+        ...datePickerNote,
+        date: updates.date,
+        start_time: updates.start_time,
+        end_time: updates.end_time,
+        reminder_minutes: updates.reminder_minutes,
+      };
+      await syncNote(updatedNote);
+    } else if (!updates.syncToCalendar && datePickerNote.calendar_event_id) {
+      // Unsync if toggle turned off
+      await unsyncNote(datePickerNote);
+    }
+
+    setDatePickerNote(null);
+    refreshData();
+  }, [datePickerNote, updateNote, syncNote, unsyncNote, refreshData]);
 
   // Get notes for current view, with sorting applied
   const getNotes = (): Note[] => {
@@ -838,13 +927,14 @@ export default function MainScreen() {
         creatorProfile={note.created_by_user_id ? userProfiles[note.created_by_user_id] : undefined}
         onToggle={handleNoteToggle}
         onDelete={handleNoteDelete}
+        onDatePress={handleDatePress}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       />
     ),
-    [density, userProfiles, handleNoteToggle, handleNoteDelete, handleDragStart, handleDragMove, handleDragEnd, handleDragCancel]
+    [density, userProfiles, handleNoteToggle, handleNoteDelete, handleDatePress, handleDragStart, handleDragMove, handleDragEnd, handleDragCancel]
   );
 
   const renderEmpty = () => (
@@ -1055,6 +1145,16 @@ export default function MainScreen() {
             onClose={() => setShareOpen(false)}
             pageId={currentPageId}
             pageName={currentPage.name}
+          />
+        )}
+
+        {/* Date/time picker */}
+        {datePickerNote && (
+          <DateTimePicker
+            visible={!!datePickerNote}
+            note={datePickerNote}
+            onSave={handleDateTimeSave}
+            onClose={() => setDatePickerNote(null)}
           />
         )}
 
