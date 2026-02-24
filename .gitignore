@@ -35,6 +35,9 @@ apps/mobile/android/app/build/
 *.keystore
 !debug.keystore
 
+# Worktrees
+.worktrees/
+
 # Misc
 *.local
 .cache/
