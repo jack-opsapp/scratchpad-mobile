@@ -1,38 +1,38 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useSettingsStore } from '../stores/settingsStore';
 
-// Accent color definitions (from SettingsDrawer)
+// Accent color definitions — must match web themes.js exactly
 const ACCENT_COLORS = {
   beige:      { primary: '#d1b18f', dark: '#BC8E5E', light: '#E5D4C1' },
-  sand:       { primary: '#c2b280', dark: '#A89563', light: '#D9CDAD' },
-  gold:       { primary: '#c9a227', dark: '#A88520', light: '#E0C55F' },
-  amber:      { primary: '#d4a574', dark: '#B88A5A', light: '#E8C9A1' },
-  rust:       { primary: '#c17f59', dark: '#A06847', light: '#D9A588' },
-  terracotta: { primary: '#c4786e', dark: '#A46158', light: '#DBA297' },
-  coral:      { primary: '#d4897a', dark: '#B47261', light: '#E8B3A7' },
-  dustyRose:  { primary: '#c4a4a4', dark: '#A88A8A', light: '#DFCCCC' },
-  mauve:      { primary: '#b09ab0', dark: '#938193', light: '#D1C3D1' },
-  lavender:   { primary: '#9a8fb8', dark: '#7E759B', light: '#C1B8DC' },
-  slate:      { primary: '#708090', dark: '#5A6777', light: '#A3B0BE' },
-  steel:      { primary: '#7895a8', dark: '#5F7A8A', light: '#AABFCE' },
-  sage:       { primary: '#9caf88', dark: '#7E926E', light: '#C5D4B4' },
-  olive:      { primary: '#8a9a5b', dark: '#6F7D4A', light: '#B5C591' },
+  sand:       { primary: '#c2b280', dark: '#a39260', light: '#d6cca0' },
+  gold:       { primary: '#c9a227', dark: '#a68521', light: '#ddc36a' },
+  amber:      { primary: '#d4a574', dark: '#b8895a', light: '#e6c9a8' },
+  rust:       { primary: '#c17f59', dark: '#a36845', light: '#d9a889' },
+  terracotta: { primary: '#c4786e', dark: '#a65d54', light: '#d9a099' },
+  coral:      { primary: '#d4897a', dark: '#b86d5e', light: '#e6b3a8' },
+  dustyRose:  { primary: '#c4a4a4', dark: '#a88585', light: '#d9c4c4' },
+  mauve:      { primary: '#b09ab0', dark: '#917a91', light: '#c9b9c9' },
+  lavender:   { primary: '#9a8fb8', dark: '#7a6f98', light: '#b8afd0' },
+  slate:      { primary: '#708090', dark: '#556270', light: '#94a3b3' },
+  steel:      { primary: '#7895a8', dark: '#5a7488', light: '#9bb3c4' },
+  sage:       { primary: '#9caf88', dark: '#7a8f6a', light: '#b8c9a8' },
+  olive:      { primary: '#8a9a5b', dark: '#6b7a45', light: '#a8b87a' },
 } as const;
 
-// Base colors (always the same)
+// Base colors — must match colors.ts and web design spec exactly
 const BASE_COLORS = {
   bg: '#000000',
-  surface: '#0a0a0a',
-  border: '#1a1a1a',
-  textPrimary: '#ffffff',
-  textSecondary: '#cccccc',
-  textMuted: '#888888',
-  success: '#4CAF50',
-  danger: '#ff6b6b',
-  error: '#ff4444',
+  surface: '#0d0d0d',
+  border: 'rgba(255, 255, 255, 0.1)',
+  textPrimary: '#e8e8e8',
+  textSecondary: '#a0a0a0',
+  textMuted: '#525252',
+  success: '#2d6b3a',
+  danger: '#b83c2a',
+  error: '#b83c2a',
   background: '#000000',
-  backgroundSecondary: '#0a0a0a',
-  backgroundTertiary: '#141414',
+  backgroundSecondary: '#0d0d0d',
+  backgroundTertiary: '#1a1a1a',
 } as const;
 
 export type ThemeColors = typeof BASE_COLORS & {

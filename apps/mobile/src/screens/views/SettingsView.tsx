@@ -96,13 +96,13 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: theme.fonts.regular,
-    fontSize: 12,
+    fontSize: 11,
     color: staticColors.textMuted,
     marginBottom: 2,
   },
   value: {
     fontFamily: theme.fonts.regular,
-    fontSize: 15,
+    fontSize: 14,
     color: staticColors.textPrimary,
   },
   infoRow: {
@@ -116,13 +116,13 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontFamily: theme.fonts.regular,
-    fontSize: 15,
+    fontSize: 14,
     color: staticColors.textPrimary,
     marginLeft: 12,
   },
   infoValue: {
     fontFamily: theme.fonts.regular,
-    fontSize: 15,
+    fontSize: 14,
     color: staticColors.textMuted,
   },
   signOutButton: {
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   signOutText: {
     fontFamily: theme.fonts.medium,
     color: staticColors.danger,
-    fontSize: 12,
+    fontSize: 11,
     letterSpacing: 1.5,
     marginLeft: 10,
   },
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   },
   footerTagline: {
     fontFamily: theme.fonts.regular,
-    fontSize: 12,
+    fontSize: 11,
     color: staticColors.textMuted,
   },
 });

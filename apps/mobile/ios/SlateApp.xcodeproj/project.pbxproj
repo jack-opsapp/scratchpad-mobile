@@ -8,16 +8,43 @@
 
 /* Begin PBXBuildFile section */
 		00E356F31AD99517003FC87E /* SlateAppTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F21AD99517003FC87E /* SlateAppTests.m */; };
+		089F61A831492CCD8705A4A5 /* WatchSessionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10686DDBAAA23A2629D11551 /* WatchSessionService.swift */; };
+		0AFF4AD086EEA6C0E2654388 /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB19EABC5F853861B41595E8 /* AgentService.swift */; };
 		0C3F537AB5564BFE891461D8 /* Manrope-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3BEE670F32A44E4EBF984ECD /* Manrope-Medium.ttf */; };
 		0C80B921A6F3F58F76C31292 /* libPods-SlateApp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-SlateApp.a */; };
 		13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.mm */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
+		19D93C68DDC9B888D4ADD6F6 /* NotesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B9ECF82603A0B63D1A757C /* NotesViewModel.swift */; };
+		205AE9E2D2D08F0AD7B59001 /* CaptureTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D00457CBEF33C5F73BD774 /* CaptureTabView.swift */; };
+		26050C1BD865EF7906564B76 /* NotesTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 018311012D8BF8EE78BC3D23 /* NotesTabView.swift */; };
+		2A85A1EFBF2EC9113C0BCCD8 /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF7335DEAD1E0FBB8BD796E3 /* SupabaseService.swift */; };
+		2E385ECA5266DF65CFBD5413 /* SlateWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 5407D7C5C32298CE5F045CE1 /* SlateWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		2F9F64B76AE3773CE429DEB5 /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E0B171AB9C7B61CCFC6C577 /* ChatViewModel.swift */; };
+		58EA9797444C83AE89571EE8 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C839E92A6909AB64E401896C /* AuthService.swift */; };
 		6104D10AA1DB4DABAF4C7646 /* Manrope-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 767D2F0326FF4D9EB9F0461E /* Manrope-Regular.ttf */; };
+		62C0245BA4C6549A9687D2D5 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 06260AB4591031AF3C77A31E /* WatchConnectivity.framework */; };
+		6C16BAFDC3572D9A5FFEBC4D /* CaptureViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E474729CA03786C2C06780B /* CaptureViewModel.swift */; };
+		6EA454AE1DB5F978DBB5BB0D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73C764DDF4531F7D0920FF10 /* ContentView.swift */; };
+		6F8154501E400E37C5D23C44 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 532513191ADA39D5B0B88B4E /* Foundation.framework */; };
+		719585C47DC4BD9BCD809DB2 /* NoteListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A61D00DBA59CE5D4AC67FC1C /* NoteListView.swift */; };
+		7543C33AB6CAB659DF28372A /* SlateModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9649ECB56C6A9F1F6009FD86 /* SlateModels.swift */; };
 		7699B88040F8A987B510C191 /* libPods-SlateApp-SlateAppTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 19F6CBCC0A4E27FBF8BF4A61 /* libPods-SlateApp-SlateAppTests.a */; };
+		76F5298F270EDB5AAF754213 /* ChatTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 048D6EC81B9CE221F6401BC1 /* ChatTabView.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		8BBC04CB88FCA7EC6B1704B0 /* SpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47EA93E3258D717110BFBB42 /* SpeechService.swift */; };
+		992D2C32D89FDFDDA65FB68C /* DestinationPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD196C53FD8AA1F281E2F1B4 /* DestinationPicker.swift */; };
 		9DFBA635E8074F5FBB6C0F26 /* Manrope-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 194B580A0ADA422F8FEBA3D3 /* Manrope-SemiBold.ttf */; };
+		9E7C25C94F022F360C19A3C8 /* WatchSessionBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F46EE546734CB5C40295C40 /* WatchSessionBridge.swift */; };
+		ADE6BCE7987636B7DC6797E6 /* SlateWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88104B5B3E5728154D9B2360 /* SlateWatchApp.swift */; };
+		BC4EC2B0BD718E343E86E7EC /* WatchSessionBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 57E8264A313EE1653BE5AEE1 /* WatchSessionBridge.m */; };
+		C0EA141B7869DB7CEB7A558D /* SectionListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14E0CBD1B85BF93396FCF625 /* SectionListView.swift */; };
+		C50D9E5C78459DC194331DAA /* NoteRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71460D2B332F847DEF21DDF /* NoteRowView.swift */; };
+		CB56B097A96C9B007656BDB0 /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 485590111C2C19DCCA13FE96 /* WatchSessionManager.swift */; };
+		CCFDAD2C04A8569A4F8F49D0 /* ChatMessageRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10F48FE6DBBC0C0E669E38C1 /* ChatMessageRow.swift */; };
+		DB06E9FDC028DD6CBD0C367C /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57DA6906AEE8EA11B666EA55 /* WatchConnectivity.framework */; };
 		E51FEDEF2F384AA8000C99F7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E51FEDEE2F384AA8000C99F7 /* PrivacyInfo.xcprivacy */; };
+		F6415B166826B800A6FC5B71 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E0112633EC41A8DDBAF3ABF8 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -28,31 +55,83 @@
 			remoteGlobalIDString = 13B07F861A680F5B00A75B9A;
 			remoteInfo = SlateApp;
 		};
+		6E433861AC3DF1C73192330C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5AAAEC416C11D400CC8DF7D2;
+			remoteInfo = SlateWatch;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		9D79B5F06772C33F91A2F2FD /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 16;
+			files = (
+				2E385ECA5266DF65CFBD5413 /* SlateWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		00E356EE1AD99517003FC87E /* SlateAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SlateAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		00E356F11AD99517003FC87E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		00E356F21AD99517003FC87E /* SlateAppTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SlateAppTests.m; sourceTree = "<group>"; };
+		018311012D8BF8EE78BC3D23 /* NotesTabView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NotesTabView.swift; sourceTree = "<group>"; };
+		048D6EC81B9CE221F6401BC1 /* ChatTabView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ChatTabView.swift; sourceTree = "<group>"; };
+		06260AB4591031AF3C77A31E /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
+		07CF46E921A5DD7B4054AEEF /* SlateWatch.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = SlateWatch.entitlements; sourceTree = "<group>"; };
+		0F46EE546734CB5C40295C40 /* WatchSessionBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchSessionBridge.swift; path = SlateApp/WatchSessionBridge.swift; sourceTree = "<group>"; };
+		10686DDBAAA23A2629D11551 /* WatchSessionService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSessionService.swift; sourceTree = "<group>"; };
+		10F48FE6DBBC0C0E669E38C1 /* ChatMessageRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ChatMessageRow.swift; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* SlateApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SlateApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FAF1A68108700A75B9A /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AppDelegate.h; path = SlateApp/AppDelegate.h; sourceTree = "<group>"; };
 		13B07FB01A68108700A75B9A /* AppDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AppDelegate.mm; path = SlateApp/AppDelegate.mm; sourceTree = "<group>"; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = SlateApp/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = SlateApp/Info.plist; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = SlateApp/main.m; sourceTree = "<group>"; };
+		14E0CBD1B85BF93396FCF625 /* SectionListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SectionListView.swift; sourceTree = "<group>"; };
 		194B580A0ADA422F8FEBA3D3 /* Manrope-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-SemiBold.ttf"; path = "../assets/fonts/Manrope-SemiBold.ttf"; sourceTree = "<group>"; };
 		19F6CBCC0A4E27FBF8BF4A61 /* libPods-SlateApp-SlateAppTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-SlateApp-SlateAppTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E3F0212713E0E0CEBAC29ED /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		28B9ECF82603A0B63D1A757C /* NotesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NotesViewModel.swift; sourceTree = "<group>"; };
 		3B4392A12AC88292D35C810B /* Pods-SlateApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SlateApp.debug.xcconfig"; path = "Target Support Files/Pods-SlateApp/Pods-SlateApp.debug.xcconfig"; sourceTree = "<group>"; };
 		3BEE670F32A44E4EBF984ECD /* Manrope-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-Medium.ttf"; path = "../assets/fonts/Manrope-Medium.ttf"; sourceTree = "<group>"; };
+		45D00457CBEF33C5F73BD774 /* CaptureTabView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaptureTabView.swift; sourceTree = "<group>"; };
+		47EA93E3258D717110BFBB42 /* SpeechService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SpeechService.swift; sourceTree = "<group>"; };
+		485590111C2C19DCCA13FE96 /* WatchSessionManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchSessionManager.swift; path = SlateApp/WatchSessionManager.swift; sourceTree = "<group>"; };
+		4AD5FB825D0C4F8EFCA7FC04 /* SlateApp-Bridging-Header.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = "SlateApp-Bridging-Header.h"; path = "SlateApp/SlateApp-Bridging-Header.h"; sourceTree = "<group>"; };
+		532513191ADA39D5B0B88B4E /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		5407D7C5C32298CE5F045CE1 /* SlateWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SlateWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5709B34CF0A7D63546082F79 /* Pods-SlateApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SlateApp.release.xcconfig"; path = "Target Support Files/Pods-SlateApp/Pods-SlateApp.release.xcconfig"; sourceTree = "<group>"; };
+		57DA6906AEE8EA11B666EA55 /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
+		57E8264A313EE1653BE5AEE1 /* WatchSessionBridge.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = WatchSessionBridge.m; path = SlateApp/WatchSessionBridge.m; sourceTree = "<group>"; };
 		5B7EB9410499542E8C5724F5 /* Pods-SlateApp-SlateAppTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SlateApp-SlateAppTests.debug.xcconfig"; path = "Target Support Files/Pods-SlateApp-SlateAppTests/Pods-SlateApp-SlateAppTests.debug.xcconfig"; sourceTree = "<group>"; };
 		5DCACB8F33CDC322A6C60F78 /* libPods-SlateApp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-SlateApp.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		73C764DDF4531F7D0920FF10 /* ContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		767D2F0326FF4D9EB9F0461E /* Manrope-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-Regular.ttf"; path = "../assets/fonts/Manrope-Regular.ttf"; sourceTree = "<group>"; };
+		7E0B171AB9C7B61CCFC6C577 /* ChatViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = SlateApp/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		88104B5B3E5728154D9B2360 /* SlateWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SlateWatchApp.swift; sourceTree = "<group>"; };
 		89C6BE57DB24E9ADA2F236DE /* Pods-SlateApp-SlateAppTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SlateApp-SlateAppTests.release.xcconfig"; path = "Target Support Files/Pods-SlateApp-SlateAppTests/Pods-SlateApp-SlateAppTests.release.xcconfig"; sourceTree = "<group>"; };
+		8E474729CA03786C2C06780B /* CaptureViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaptureViewModel.swift; sourceTree = "<group>"; };
+		9649ECB56C6A9F1F6009FD86 /* SlateModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SlateModels.swift; sourceTree = "<group>"; };
+		A0BA4D38ED06EDE550844E15 /* Speech.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Speech.framework; path = System/Library/Frameworks/Speech.framework; sourceTree = SDKROOT; };
 		A1B2C3D4E5F647890ABCDEF0 /* SlateApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = SlateApp.entitlements; path = SlateApp/SlateApp.entitlements; sourceTree = "<group>"; };
+		A61D00DBA59CE5D4AC67FC1C /* NoteListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NoteListView.swift; sourceTree = "<group>"; };
+		A71460D2B332F847DEF21DDF /* NoteRowView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NoteRowView.swift; sourceTree = "<group>"; };
+		BD196C53FD8AA1F281E2F1B4 /* DestinationPicker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DestinationPicker.swift; sourceTree = "<group>"; };
+		C839E92A6909AB64E401896C /* AuthService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		E0112633EC41A8DDBAF3ABF8 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E51FEDEE2F384AA8000C99F7 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		EF7335DEAD1E0FBB8BD796E3 /* SupabaseService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
+		FB19EABC5F853861B41595E8 /* AgentService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgentService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -69,6 +148,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				0C80B921A6F3F58F76C31292 /* libPods-SlateApp.a in Frameworks */,
+				62C0245BA4C6549A9687D2D5 /* WatchConnectivity.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		367E0FB1E50AAC60BC84D6C0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6F8154501E400E37C5D23C44 /* Foundation.framework in Frameworks */,
+				DB06E9FDC028DD6CBD0C367C /* WatchConnectivity.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -92,6 +181,15 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
+		0D85EFE8B515D1F0F5DBBC30 /* Chat */ = {
+			isa = PBXGroup;
+			children = (
+				10F48FE6DBBC0C0E669E38C1 /* ChatMessageRow.swift */,
+				048D6EC81B9CE221F6401BC1 /* ChatTabView.swift */,
+			);
+			path = Chat;
+			sourceTree = "<group>";
+		};
 		13B07FAE1A68108700A75B9A /* SlateApp */ = {
 			isa = PBXGroup;
 			children = (
@@ -103,8 +201,21 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB71A68108700A75B9A /* main.m */,
+				485590111C2C19DCCA13FE96 /* WatchSessionManager.swift */,
+				0F46EE546734CB5C40295C40 /* WatchSessionBridge.swift */,
+				57E8264A313EE1653BE5AEE1 /* WatchSessionBridge.m */,
+				4AD5FB825D0C4F8EFCA7FC04 /* SlateApp-Bridging-Header.h */,
 			);
 			name = SlateApp;
+			sourceTree = "<group>";
+		};
+		196894009EE1E027BBCDEE5C /* Capture */ = {
+			isa = PBXGroup;
+			children = (
+				45D00457CBEF33C5F73BD774 /* CaptureTabView.swift */,
+				BD196C53FD8AA1F281E2F1B4 /* DestinationPicker.swift */,
+			);
+			path = Capture;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
@@ -113,8 +224,79 @@
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				5DCACB8F33CDC322A6C60F78 /* libPods-SlateApp.a */,
 				19F6CBCC0A4E27FBF8BF4A61 /* libPods-SlateApp-SlateAppTests.a */,
+				42AC168210BE77A1D8333B0F /* watchOS */,
+				57DA6906AEE8EA11B666EA55 /* WatchConnectivity.framework */,
+				A0BA4D38ED06EDE550844E15 /* Speech.framework */,
+				06260AB4591031AF3C77A31E /* WatchConnectivity.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		42AC168210BE77A1D8333B0F /* watchOS */ = {
+			isa = PBXGroup;
+			children = (
+				532513191ADA39D5B0B88B4E /* Foundation.framework */,
+			);
+			name = watchOS;
+			sourceTree = "<group>";
+		};
+		43FA71B927B2231365296FF5 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				8E474729CA03786C2C06780B /* CaptureViewModel.swift */,
+				7E0B171AB9C7B61CCFC6C577 /* ChatViewModel.swift */,
+				28B9ECF82603A0B63D1A757C /* NotesViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		487F7EC4536F9B761D2A1349 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				0D85EFE8B515D1F0F5DBBC30 /* Chat */,
+				7DE7C1362C625C02D976BC27 /* Notes */,
+				196894009EE1E027BBCDEE5C /* Capture */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		54B3614681B4438E379B9279 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				FB19EABC5F853861B41595E8 /* AgentService.swift */,
+				C839E92A6909AB64E401896C /* AuthService.swift */,
+				47EA93E3258D717110BFBB42 /* SpeechService.swift */,
+				EF7335DEAD1E0FBB8BD796E3 /* SupabaseService.swift */,
+				10686DDBAAA23A2629D11551 /* WatchSessionService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		76BBFC6E380E3342DA6EAC92 /* SlateWatch */ = {
+			isa = PBXGroup;
+			children = (
+				88104B5B3E5728154D9B2360 /* SlateWatchApp.swift */,
+				73C764DDF4531F7D0920FF10 /* ContentView.swift */,
+				1E3F0212713E0E0CEBAC29ED /* Info.plist */,
+				07CF46E921A5DD7B4054AEEF /* SlateWatch.entitlements */,
+				E0112633EC41A8DDBAF3ABF8 /* Assets.xcassets */,
+				8DA4927E524B7F8ED8DF65A5 /* Models */,
+				54B3614681B4438E379B9279 /* Services */,
+				43FA71B927B2231365296FF5 /* ViewModels */,
+				487F7EC4536F9B761D2A1349 /* Views */,
+			);
+			path = SlateWatch;
+			sourceTree = "<group>";
+		};
+		7DE7C1362C625C02D976BC27 /* Notes */ = {
+			isa = PBXGroup;
+			children = (
+				A61D00DBA59CE5D4AC67FC1C /* NoteListView.swift */,
+				A71460D2B332F847DEF21DDF /* NoteRowView.swift */,
+				018311012D8BF8EE78BC3D23 /* NotesTabView.swift */,
+				14E0CBD1B85BF93396FCF625 /* SectionListView.swift */,
+			);
+			path = Notes;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -134,6 +316,7 @@
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
 				C6BF4F2655FB435F93345BBE /* Resources */,
+				76BBFC6E380E3342DA6EAC92 /* SlateWatch */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -145,8 +328,17 @@
 			children = (
 				13B07F961A680F5B00A75B9A /* SlateApp.app */,
 				00E356EE1AD99517003FC87E /* SlateAppTests.xctest */,
+				5407D7C5C32298CE5F045CE1 /* SlateWatch.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		8DA4927E524B7F8ED8DF65A5 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				9649ECB56C6A9F1F6009FD86 /* SlateModels.swift */,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
 		BBD78D7AC51CEA395F1C20DB /* Pods */ = {
@@ -205,14 +397,33 @@
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				00EEFC60759A1932668264C0 /* [CP] Embed Pods Frameworks */,
 				E235C05ADACE081382539298 /* [CP] Copy Pods Resources */,
+				9D79B5F06772C33F91A2F2FD /* Embed Watch Content */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				1FF1AA74EDA67C9EB16EE893 /* PBXTargetDependency */,
+			);
+			name = SlateApp;
+			productName = SlateApp;
+			productReference = 13B07F961A680F5B00A75B9A /* SlateApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+		5AAAEC416C11D400CC8DF7D2 /* SlateWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E2BD8739D21228EE57DF5C94 /* Build configuration list for PBXNativeTarget "SlateWatch" */;
+			buildPhases = (
+				44E45EABA378F5DCF20D4B4B /* Sources */,
+				367E0FB1E50AAC60BC84D6C0 /* Frameworks */,
+				8B9BC061DE2E13800A9891A8 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = SlateApp;
-			productName = SlateApp;
-			productReference = 13B07F961A680F5B00A75B9A /* SlateApp.app */;
+			name = SlateWatch;
+			productName = SlateWatch;
+			productReference = 5407D7C5C32298CE5F045CE1 /* SlateWatch.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -247,6 +458,7 @@
 			targets = (
 				13B07F861A680F5B00A75B9A /* SlateApp */,
 				00E356ED1AD99517003FC87E /* SlateAppTests */,
+				5AAAEC416C11D400CC8DF7D2 /* SlateWatch */,
 			);
 		};
 /* End PBXProject section */
@@ -269,6 +481,14 @@
 				0C3F537AB5564BFE891461D8 /* Manrope-Medium.ttf in Resources */,
 				9DFBA635E8074F5FBB6C0F26 /* Manrope-SemiBold.ttf in Resources */,
 				6104D10AA1DB4DABAF4C7646 /* Manrope-Regular.ttf in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8B9BC061DE2E13800A9891A8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F6415B166826B800A6FC5B71 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -299,9 +519,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-SlateApp/Pods-SlateApp-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-SlateApp/Pods-SlateApp-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -360,9 +584,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-SlateApp-SlateAppTests/Pods-SlateApp-SlateAppTests-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-SlateApp-SlateAppTests/Pods-SlateApp-SlateAppTests-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -377,9 +605,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-SlateApp/Pods-SlateApp-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-SlateApp/Pods-SlateApp-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -394,9 +626,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-SlateApp-SlateAppTests/Pods-SlateApp-SlateAppTests-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-SlateApp-SlateAppTests/Pods-SlateApp-SlateAppTests-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -420,6 +656,35 @@
 			files = (
 				13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */,
 				13B07FC11A68108700A75B9A /* main.m in Sources */,
+				CB56B097A96C9B007656BDB0 /* WatchSessionManager.swift in Sources */,
+				9E7C25C94F022F360C19A3C8 /* WatchSessionBridge.swift in Sources */,
+				BC4EC2B0BD718E343E86E7EC /* WatchSessionBridge.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		44E45EABA378F5DCF20D4B4B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ADE6BCE7987636B7DC6797E6 /* SlateWatchApp.swift in Sources */,
+				6EA454AE1DB5F978DBB5BB0D /* ContentView.swift in Sources */,
+				7543C33AB6CAB659DF28372A /* SlateModels.swift in Sources */,
+				0AFF4AD086EEA6C0E2654388 /* AgentService.swift in Sources */,
+				58EA9797444C83AE89571EE8 /* AuthService.swift in Sources */,
+				8BBC04CB88FCA7EC6B1704B0 /* SpeechService.swift in Sources */,
+				2A85A1EFBF2EC9113C0BCCD8 /* SupabaseService.swift in Sources */,
+				089F61A831492CCD8705A4A5 /* WatchSessionService.swift in Sources */,
+				6C16BAFDC3572D9A5FFEBC4D /* CaptureViewModel.swift in Sources */,
+				2F9F64B76AE3773CE429DEB5 /* ChatViewModel.swift in Sources */,
+				19D93C68DDC9B888D4ADD6F6 /* NotesViewModel.swift in Sources */,
+				CCFDAD2C04A8569A4F8F49D0 /* ChatMessageRow.swift in Sources */,
+				76F5298F270EDB5AAF754213 /* ChatTabView.swift in Sources */,
+				719585C47DC4BD9BCD809DB2 /* NoteListView.swift in Sources */,
+				C50D9E5C78459DC194331DAA /* NoteRowView.swift in Sources */,
+				26050C1BD865EF7906564B76 /* NotesTabView.swift in Sources */,
+				C0EA141B7869DB7CEB7A558D /* SectionListView.swift in Sources */,
+				205AE9E2D2D08F0AD7B59001 /* CaptureTabView.swift in Sources */,
+				992D2C32D89FDFDDA65FB68C /* DestinationPicker.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -430,6 +695,12 @@
 			isa = PBXTargetDependency;
 			target = 13B07F861A680F5B00A75B9A /* SlateApp */;
 			targetProxy = 00E356F41AD99517003FC87E /* PBXContainerItemProxy */;
+		};
+		1FF1AA74EDA67C9EB16EE893 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = SlateWatch;
+			target = 5AAAEC416C11D400CC8DF7D2 /* SlateWatch */;
+			targetProxy = 6E433861AC3DF1C73192330C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -509,6 +780,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = co.opsapp.slate;
 				PRODUCT_NAME = SlateApp;
+				SWIFT_OBJC_BRIDGING_HEADER = "SlateApp/SlateApp-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -538,6 +810,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = co.opsapp.slate;
 				PRODUCT_NAME = SlateApp;
+				SWIFT_OBJC_BRIDGING_HEADER = "SlateApp/SlateApp-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -696,6 +969,59 @@
 			};
 			name = Release;
 		};
+		BA54F8A717DAF759AC729F4B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = SlateWatch/SlateWatch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = X47H96M34K;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SlateWatch/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SLATE;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = co.opsapp.slate.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10;
+			};
+			name = Debug;
+		};
+		EB232D3722CC706752CB25E1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = SlateWatch/SlateWatch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = X47H96M34K;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SlateWatch/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SLATE;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = co.opsapp.slate.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 10;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -722,6 +1048,15 @@
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,
 				83CBBA211A601CBA00E9B192 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E2BD8739D21228EE57DF5C94 /* Build configuration list for PBXNativeTarget "SlateWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EB232D3722CC706752CB25E1 /* Release */,
+				BA54F8A717DAF759AC729F4B /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

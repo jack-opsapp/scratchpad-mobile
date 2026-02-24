@@ -63,7 +63,13 @@ export interface UserSettings {
   // Developer
   custom_openai_key: string | null;
   custom_openai_model: string | null;
+
+  // Onboarding
+  demo_complete: boolean;
 }
+
+// Settings that are stored locally only (not synced to Supabase)
+const LOCAL_ONLY_KEYS: Set<keyof UserSettings> = new Set(['demo_complete']);
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme: 'dark',
@@ -93,6 +99,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   require_invite_approval: false,
   custom_openai_key: null,
   custom_openai_model: 'gpt-4.1-mini',
+  demo_complete: false,
 };
 
 interface SettingsState {
@@ -167,6 +174,7 @@ export const useSettingsStore = create<SettingsState>()(
               require_invite_approval: data.require_invite_approval ?? DEFAULT_SETTINGS.require_invite_approval,
               custom_openai_key: data.custom_openai_key,
               custom_openai_model: data.custom_openai_model,
+              demo_complete: data.demo_complete ?? DEFAULT_SETTINGS.demo_complete,
             };
             set({ settings, loading: false });
           }
@@ -187,6 +195,9 @@ export const useSettingsStore = create<SettingsState>()(
         const prev = get().settings;
         set({ settings: { ...prev, [key]: value } });
 
+        // Skip Supabase for local-only settings
+        if (LOCAL_ONLY_KEYS.has(key)) return;
+
         const { error } = await supabase
           .from('user_settings')
           .update({ [key]: value })
@@ -205,9 +216,18 @@ export const useSettingsStore = create<SettingsState>()(
         const prev = get().settings;
         set({ settings: { ...prev, ...updates } });
 
+        // Filter out local-only keys before syncing to Supabase
+        const remoteUpdates: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(updates)) {
+          if (!LOCAL_ONLY_KEYS.has(k as keyof UserSettings)) {
+            remoteUpdates[k] = v;
+          }
+        }
+        if (Object.keys(remoteUpdates).length === 0) return;
+
         const { error } = await supabase
           .from('user_settings')
-          .update(updates)
+          .update(remoteUpdates)
           .eq('user_id', user.id);
 
         if (error) {

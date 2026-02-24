@@ -6,26 +6,31 @@
 export const colors = {
   // Core backgrounds
   bg: '#000000',
-  surface: '#0a0a0a',
-  border: '#1a1a1a',
+  surface: '#0d0d0d',
+  surfaceRaised: '#1a1a1a',
+  border: 'rgba(255, 255, 255, 0.1)',
 
-  // Brand accent (gold) - use sparingly
-  primary: '#d1b18f',
-  primaryDark: '#BC8E5E',
-  primaryLight: '#E5D4C1',
+  // Brand accent (beige) - use sparingly
+  primary: '#948b72',
+  primaryDark: '#766f5b',
+  primaryLight: '#b5ae9a',
 
   // Text
-  textPrimary: '#ffffff',
-  textSecondary: '#cccccc',  // Brighter than muted, for agent responses
-  textMuted: '#888888',
+  textPrimary: '#e8e8e8',
+  textSecondary: '#a0a0a0',
+  textMuted: '#525252',
 
   // Semantic
-  success: '#4CAF50',
-  danger: '#ff6b6b',
-  error: '#ff4444',
+  success: '#2d6b3a',
+  danger: '#b83c2a',
+  warning: '#7a5c1a',
+
+  // Overlay
+  overlay: 'rgba(0, 0, 0, 0.72)',
 
   // Aliases for backward compatibility
   background: '#000000',
-  backgroundSecondary: '#0a0a0a',
-  backgroundTertiary: '#141414',
+  backgroundSecondary: '#0d0d0d',
+  backgroundTertiary: '#1a1a1a',
+  error: '#b83c2a',
 } as const;

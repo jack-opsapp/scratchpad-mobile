@@ -14,18 +14,16 @@ export const theme = {
     semibold: 'Manrope-SemiBold',
   },
 
-  // Font sizes matching web app
+  // Font sizes matching web design system
   fontSize: {
-    xxs: 10,
     xs: 11,
-    sm: 12,
-    base: 13,
-    md: 14,
-    lg: 16,
-    xl: 20,
-    '2xl': 24,
-    '3xl': 32,
-    '4xl': 56,
+    sm: 13,
+    base: 14,
+    md: 16,
+    lg: 18,
+    xl: 24,
+    '2xl': 32,
+    '3xl': 40,
   },
 
   fontWeight: {
@@ -56,22 +54,23 @@ export const theme = {
     xl: 32,
   },
 
-  // NO border radius - sharp corners throughout
+  // Sharp corners throughout — 2px max
   borderRadius: {
     none: 0,
     sm: 0,
     md: 0,
     lg: 0,
-    // Only exception: pills and specific UI elements
-    pill: 4,
-    sheet: 12, // Bottom sheets only
+    // Only exception: popovers/floating elements (4px max)
+    pill: 2,
+    popover: 4,
+    sheet: 4,
   },
 
   // Common component styles
   components: {
     // Cards - sharp corners, subtle border
     card: {
-      backgroundColor: colors.surface,
+      backgroundColor: 'transparent',
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: 0,
@@ -87,24 +86,26 @@ export const theme = {
         paddingHorizontal: 20,
       },
       accent: {
-        backgroundColor: colors.primary,
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderColor: colors.primary,
         paddingVertical: 12,
         paddingHorizontal: 20,
       },
     },
-    // Inputs - transparent, bordered
+    // Inputs - transparent, no visible border by default
     input: {
       backgroundColor: 'transparent',
-      borderWidth: 1,
+      borderWidth: 0,
       borderColor: colors.border,
       paddingVertical: 8,
       paddingHorizontal: 12,
       color: colors.textPrimary,
-      fontSize: 13,
+      fontSize: 14,
     },
     // Tags/Pills
     tag: {
-      paddingVertical: 3,
+      paddingVertical: 2,
       paddingHorizontal: 8,
       borderWidth: 1,
       borderColor: colors.border,
@@ -114,8 +115,8 @@ export const theme = {
     },
     // Checkbox - square, not rounded
     checkbox: {
-      size: 24,
-      borderWidth: 2,
+      size: 16,
+      borderWidth: 1,
       borderColor: colors.border,
       borderRadius: 0,
     },
@@ -135,6 +136,13 @@ export const theme = {
     paddingHorizontal: 0,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+
+  // Transitions
+  transitions: {
+    fast: 150,
+    normal: 200,
+    slow: 250,
   },
 } as const;
 

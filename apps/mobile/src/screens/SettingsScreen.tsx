@@ -72,8 +72,8 @@ const styles = StyleSheet.create({
     borderBottomColor: staticColors.border,
   },
   headerTitle: {
+    fontFamily: theme.fonts.semibold,
     fontSize: theme.fontSize.xs,
-    fontWeight: theme.fontWeight.medium,
     color: staticColors.textMuted,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
@@ -86,8 +86,8 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.lg,
   },
   sectionTitle: {
+    fontFamily: theme.fonts.semibold,
     fontSize: theme.fontSize.xs,
-    fontWeight: theme.fontWeight.medium,
     color: staticColors.textMuted,
     letterSpacing: 1.5,
     marginBottom: theme.spacing.sm,
@@ -106,11 +106,13 @@ const styles = StyleSheet.create({
     marginLeft: theme.spacing.sm,
   },
   label: {
+    fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.sm,
     color: staticColors.textMuted,
     marginBottom: 2,
   },
   value: {
+    fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.base,
     color: staticColors.textPrimary,
   },
@@ -120,6 +122,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   infoValue: {
+    fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.base,
     color: staticColors.textMuted,
   },
@@ -133,9 +136,9 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
   },
   signOutText: {
+    fontFamily: theme.fonts.medium,
     color: staticColors.danger,
     fontSize: theme.fontSize.xs,
-    fontWeight: theme.fontWeight.medium,
     letterSpacing: 1.5,
     marginLeft: theme.spacing.sm,
   },
@@ -146,13 +149,14 @@ const styles = StyleSheet.create({
     borderTopColor: staticColors.border,
   },
   footerText: {
+    fontFamily: theme.fonts.medium,
     fontSize: theme.fontSize.sm,
-    fontWeight: theme.fontWeight.medium,
     color: staticColors.textMuted,
     letterSpacing: 2,
     marginBottom: theme.spacing.xs,
   },
   footerSubtext: {
+    fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.xs,
     color: staticColors.textMuted,
   },

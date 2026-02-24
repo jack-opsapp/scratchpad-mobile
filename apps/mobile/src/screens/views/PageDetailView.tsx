@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
   },
   sectionName: {
     fontFamily: theme.fonts.regular,
-    fontSize: 16,
+    fontSize: theme.fontSize.md,
     color: staticColors.textPrimary,
   },
   sectionStats: {

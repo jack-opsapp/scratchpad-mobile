@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   },
   menuText: {
     fontFamily: theme.fonts.regular,
-    fontSize: 15,
+    fontSize: 14,
     color: staticColors.textPrimary,
   },
 });

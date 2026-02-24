@@ -112,8 +112,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backText: {
+    fontFamily: theme.fonts.medium,
     fontSize: theme.fontSize.xs,
-    fontWeight: theme.fontWeight.medium,
     color: staticColors.textMuted,
     letterSpacing: 1.5,
     marginLeft: theme.spacing.xs,
@@ -125,12 +125,13 @@ const styles = StyleSheet.create({
     borderBottomColor: staticColors.border,
   },
   pageTitle: {
+    fontFamily: theme.fonts.medium,
     fontSize: theme.fontSize.xl,
-    fontWeight: theme.fontWeight.medium,
     color: staticColors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
   sectionCount: {
+    fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.sm,
     color: staticColors.textMuted,
   },
@@ -151,11 +152,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionName: {
+    fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.lg,
-    fontWeight: theme.fontWeight.normal,
     color: staticColors.textPrimary,
   },
   sectionStats: {
+    fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.sm,
     color: staticColors.textMuted,
     marginTop: theme.spacing.xs,
@@ -167,12 +169,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xl,
   },
   emptyTitle: {
+    fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.lg,
-    fontWeight: theme.fontWeight.normal,
     color: staticColors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   emptySubtitle: {
+    fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.md,
     color: staticColors.textMuted,
     textAlign: 'center',

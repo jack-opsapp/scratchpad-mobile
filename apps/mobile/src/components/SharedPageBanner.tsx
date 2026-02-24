@@ -31,11 +31,11 @@ export default function SharedPageBanner({
         </View>
         <View style={styles.buttons}>
           <TouchableOpacity
-            style={[styles.acceptButton, { backgroundColor: colors.primary }]}
+            style={[styles.acceptButton, { borderColor: colors.primary }]}
             onPress={onAccept}
             activeOpacity={0.7}
           >
-            <Text style={styles.acceptText}>Accept</Text>
+            <Text style={[styles.acceptText, { color: colors.primary }]}>Accept</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.declineButton}
@@ -87,13 +87,15 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   acceptButton: {
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    backgroundColor: 'transparent',
     paddingVertical: 8,
     paddingHorizontal: 16,
   },
   acceptText: {
     fontFamily: theme.fonts.semibold,
     fontSize: 13,
-    color: staticColors.bg,
   },
   declineButton: {
     borderWidth: 1,

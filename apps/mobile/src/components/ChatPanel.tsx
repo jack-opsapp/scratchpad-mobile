@@ -37,7 +37,7 @@ import Voice, {
   SpeechErrorEvent,
   SpeechVolumeChangeEvent,
 } from '@react-native-voice/voice';
-import { Send, Mic, Square, ChevronDown, ChevronRight, Check, X, FileText, FolderPlus, StickyNote, Trash2 } from 'lucide-react-native';
+import { Send, Mic, Square, ChevronDown, ChevronUp, ChevronRight, Check, X, FileText, FolderPlus, StickyNote, Trash2 } from 'lucide-react-native';
 import { colors as staticColors, theme } from '../styles';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSettingsStore } from '../stores/settingsStore';
@@ -143,7 +143,7 @@ function ActionIcon({ type }: { type: PlanAction['type'] }) {
 
 function getStatusDotColor(status: PlanGroupStatus, execState?: string, accentColor?: string): string {
   if (execState === 'complete') return staticColors.success;
-  if (execState === 'executing') return '#4a9eff';
+  if (execState === 'executing') return staticColors.primary;
   switch (status) {
     case 'approved': return accentColor || staticColors.primary;
     case 'skipped': return staticColors.textMuted;
@@ -203,7 +203,7 @@ function PlanCard({
           const borderLeftColor = isComplete
             ? staticColors.success
             : isExecuting && isApproved
-              ? '#4a9eff'
+              ? staticColors.primary
               : isApproved
                 ? colors.primary
                 : staticColors.border;
@@ -309,7 +309,7 @@ function PlanCard({
             <Text style={planStyles.approveAllText}>Approve All</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[planStyles.executeButton, { backgroundColor: colors.primary }, !hasApproved && planStyles.executeButtonDisabled]}
+            style={[planStyles.executeButton, { backgroundColor: 'transparent', borderColor: colors.primary }, !hasApproved && planStyles.executeButtonDisabled]}
             onPress={() => hasApproved && onExecute?.(messageIndex)}
             activeOpacity={hasApproved ? 0.7 : 1}
             disabled={!hasApproved}
@@ -356,6 +356,8 @@ interface ChatPanelProps {
   onPlanApproveAll?: (messageIndex: number) => void;
   onPlanExecute?: (messageIndex: number) => void;
   onPlanCancel?: (messageIndex: number) => void;
+  onDemoCreateData?: () => Promise<void>;
+  onDemoCleanupData?: () => Promise<void>;
 }
 
 export default function ChatPanel({
@@ -369,10 +371,12 @@ export default function ChatPanel({
   onPlanApproveAll,
   onPlanExecute,
   onPlanCancel,
+  onDemoCreateData,
+  onDemoCleanupData,
 }: ChatPanelProps) {
   const insets = useSafeAreaInsets();
   const colors = useTheme();
-  const { settings, updateSetting } = useSettingsStore();
+  const { settings, updateSetting, updateSettings } = useSettingsStore();
 
   // Compute chat appearance colors from settings
   // Background: mode determines tint color, slider is opacity
@@ -387,6 +391,8 @@ export default function ChatPanel({
   const [isListening, setIsListening] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const listRef = useRef<FlatList>(null);
+  const historyIndexRef = useRef(-1);
+  const savedInputRef = useRef('');
 
   const panelHeight = useSharedValue(HEIGHTS.inputOnly);
   const dragStartHeightSV = useSharedValue(HEIGHTS.inputOnly);
@@ -398,6 +404,192 @@ export default function ChatPanel({
   const waveformTime = useSharedValue(0);
   const volumeLevel = useSharedValue(0);
   const inputAreaWidthSV = useSharedValue(300);
+
+  // ====== Demo state ======
+  // Steps: agent messages type in chat area, user messages type into input field.
+  // After note creation step, collapse chat, show data, then prompt "continue".
+  // On final send, clean up demo data.
+  const DEMO_SCRIPT = [
+    { role: 'agent' as const, content: "Welcome to Slate. Think of me as your personal assistant \u2014 just type or speak naturally, and I'll record and file your thoughts, notes, and ideas automatically." },
+    { role: 'agent' as const, content: "Here's how it works: your workspace is organized into Pages \u2192 Sections \u2192 Notes. Pages are top-level topics. Sections live inside pages. Notes live inside sections. Notes can have tags." },
+    { role: 'user' as const,  content: "Create a page called Work Projects" },
+    { role: 'agent' as const, content: "Done \u2014 I created 'Work Projects' with a default section.", action: 'create_data' as const },
+    { role: 'user' as const,  content: "Review the Q3 budget report #urgent" },
+    { role: 'agent' as const, content: "Filed and tagged #urgent. Take a look \u2014 your note is right there.", action: 'collapse' as const },
+    { role: 'user' as const,  content: "GOT IT" },
+  ];
+
+  const TYPEWRITER_SPEED = 15; // ms per character
+  const DEMO_ADVANCE_DELAY = 600; // ms between messages
+
+  const [demoStep, setDemoStep] = useState(0);
+  const [typedText, setTypedText] = useState('');
+  const [demoFinished, setDemoFinished] = useState(false);
+  const [waitingForUserSend, setWaitingForUserSend] = useState(false);
+  const [demoPaused, setDemoPaused] = useState(false); // Pause during collapse/viewport phase
+  const demoCollapsedRef = useRef(false); // After collapse action, prevent re-expansion
+  const cursorOpacity = useSharedValue(1);
+  const sendGlow = useSharedValue(0);
+
+  const showDemo = !settings.demo_complete && !demoFinished;
+  const currentDemoMsg = showDemo ? DEMO_SCRIPT[demoStep] : null;
+  const isDemoUserStep = currentDemoMsg?.role === 'user';
+
+  // Typewriter effect — agent messages type in chat area, user messages type into input
+  useEffect(() => {
+    if (!showDemo || waitingForUserSend || demoPaused) return;
+
+    const currentMsg = DEMO_SCRIPT[demoStep];
+    if (!currentMsg) return;
+
+    // Guard: if typedText is stale from a previous step (longer than current message),
+    // reset it and let the next effect cycle start fresh
+    if (typedText.length > 0 && !currentMsg.content.startsWith(typedText)) {
+      setTypedText('');
+      setInputValue('');
+      return;
+    }
+
+    if (typedText.length < currentMsg.content.length) {
+      const timer = setTimeout(() => {
+        const nextText = currentMsg.content.slice(0, typedText.length + 1);
+        setTypedText(nextText);
+        if (currentMsg.role === 'user') {
+          setInputValue(nextText);
+        }
+      }, TYPEWRITER_SPEED);
+      return () => clearTimeout(timer);
+    } else {
+      // Message fully typed
+      if (currentMsg.role === 'user') {
+        // Wait for user to press send
+        setWaitingForUserSend(true);
+        // Start glow pulse on send button
+        sendGlow.value = withRepeat(
+          withSequence(
+            withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+            withTiming(0, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+          ),
+          -1,
+          true,
+        );
+        return;
+      }
+
+      // Agent message done — handle actions then advance
+      const advance = () => {
+        if (demoStep < DEMO_SCRIPT.length - 1) {
+          const timer = setTimeout(() => {
+            setDemoStep(prev => prev + 1);
+            setTypedText('');
+          }, DEMO_ADVANCE_DELAY);
+          return timer;
+        } else {
+          // Last message — complete demo after brief pause
+          const timer = setTimeout(() => {
+            setDemoFinished(true);
+            updateSettings({ demo_complete: true });
+          }, 1000);
+          return timer;
+        }
+      };
+
+      // Check for side-effect actions
+      if ('action' in currentMsg && currentMsg.action === 'create_data') {
+        onDemoCreateData?.();
+        const t = advance();
+        return () => clearTimeout(t);
+      } else if ('action' in currentMsg && currentMsg.action === 'collapse') {
+        // Collapse chat to show just input, pause to let user see the note
+        // Timer for advancing is handled by a separate effect to avoid cleanup conflicts
+        demoCollapsedRef.current = true;
+        setHeight(HEIGHTS.collapsed);
+        setDemoPaused(true);
+        return;
+      } else {
+        const t = advance();
+        return () => clearTimeout(t);
+      }
+    }
+  }, [showDemo, demoStep, typedText, waitingForUserSend, demoPaused]);
+
+  // Handle send during demo — advances past user step
+  const handleDemoSend = useCallback(async () => {
+    if (!waitingForUserSend) return;
+    setWaitingForUserSend(false);
+    sendGlow.value = 0; // Stop glow
+    setInputValue('');
+
+    if (demoStep >= DEMO_SCRIPT.length - 1) {
+      // Last step — clean up demo data before completing
+      demoCollapsedRef.current = false;
+      if (onDemoCleanupData) await onDemoCleanupData();
+      setDemoFinished(true);
+      updateSettings({ demo_complete: true });
+    } else {
+      setDemoStep(prev => prev + 1);
+      setTypedText('');
+    }
+  }, [waitingForUserSend, sendGlow, demoStep, onDemoCleanupData, updateSettings]);
+
+  // Cursor blink animation
+  useEffect(() => {
+    if (showDemo) {
+      cursorOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0, { duration: 400 }),
+          withTiming(1, { duration: 400 }),
+        ),
+        -1,
+        true,
+      );
+    }
+  }, [showDemo, cursorOpacity]);
+
+  const cursorAnimStyle = useAnimatedStyle(() => ({
+    opacity: cursorOpacity.value,
+  }));
+
+  // Send button glow animation
+  const sendGlowStyle = useAnimatedStyle(() => ({
+    shadowColor: colors.primary,
+    shadowOpacity: interpolate(sendGlow.value, [0, 1], [0, 0.9]),
+    shadowRadius: interpolate(sendGlow.value, [0, 1], [0, 12]),
+    shadowOffset: { width: 0, height: 0 },
+    borderColor: colors.primary,
+  }));
+
+  // Full-page expand when demo is active (but not after collapse action)
+  useEffect(() => {
+    if (showDemo && !demoPaused && !demoCollapsedRef.current && height < HEIGHTS.large) {
+      setHeight(HEIGHTS.large);
+    }
+  }, [showDemo, demoPaused]);
+
+  // After collapse: wait 2s, advance to next step, then unpause
+  useEffect(() => {
+    if (!demoPaused || !demoCollapsedRef.current) return;
+    // If step already advanced to user step, just unpause
+    if (isDemoUserStep) {
+      setDemoPaused(false);
+      return;
+    }
+    // Otherwise wait, then advance
+    const timer = setTimeout(() => {
+      setDemoStep(prev => prev + 1);
+      setTypedText('');
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [demoPaused, demoStep]);
+
+  const handleSkipDemo = useCallback(() => {
+    demoCollapsedRef.current = false;
+    setDemoFinished(true);
+    setInputValue('');
+    sendGlow.value = 0;
+    onDemoCleanupData?.();
+    updateSettings({ demo_complete: true });
+  }, [updateSettings, onDemoCleanupData, sendGlow]);
 
   // Waveform time driver: increments on each frame while recording
   const waveformFrameCallback = useFrameCallback((frameInfo) => {
@@ -519,18 +711,19 @@ export default function ChatPanel({
   // Sync animated value for programmatic height changes
   useEffect(() => {
     if (!isDraggingSV.value) {
-      panelHeight.value = withTiming(height, { duration: 300 });
+      panelHeight.value = withTiming(height, { duration: 250 });
     }
   }, [height, isDraggingSV, panelHeight]);
 
-  // Force API key prompt height when no key
+  // Force API key prompt height when no key (only after demo is complete)
   useEffect(() => {
+    if (showDemo) return; // Don't override height during demo
     if (!hasApiKey) {
       setHeight(HEIGHTS.apiKeyPrompt);
     } else if (height === HEIGHTS.apiKeyPrompt) {
       setHeight(HEIGHTS.inputOnly);
     }
-  }, [hasApiKey]);
+  }, [hasApiKey, showDemo]);
 
   // Auto-expand when messages arrive
   useEffect(() => {
@@ -570,7 +763,7 @@ export default function ChatPanel({
           closest = snapPoints[i];
         }
       }
-      panelHeight.value = withTiming(closest, { duration: 300 });
+      panelHeight.value = withTiming(closest, { duration: 250 });
       isDraggingSV.value = false;
       runOnJS(finishDrag)(closest);
     });
@@ -609,7 +802,32 @@ export default function ChatPanel({
 
     onSendMessage(inputValue.trim());
     setInputValue('');
+    historyIndexRef.current = -1;
+    savedInputRef.current = '';
   }, [inputValue, isListening, micPulse, onSendMessage, contractOverlay]);
+
+  const userMessages = messages.filter(m => m.role === 'user').map(m => m.content);
+
+  const handleHistoryUp = useCallback(() => {
+    if (userMessages.length === 0) return;
+    if (historyIndexRef.current === -1) {
+      savedInputRef.current = inputValue;
+    }
+    const nextIndex = Math.min(historyIndexRef.current + 1, userMessages.length - 1);
+    historyIndexRef.current = nextIndex;
+    setInputValue(userMessages[userMessages.length - 1 - nextIndex]);
+  }, [userMessages, inputValue]);
+
+  const handleHistoryDown = useCallback(() => {
+    if (historyIndexRef.current <= -1) return;
+    const nextIndex = historyIndexRef.current - 1;
+    historyIndexRef.current = nextIndex;
+    if (nextIndex < 0) {
+      setInputValue(savedInputRef.current);
+    } else {
+      setInputValue(userMessages[userMessages.length - 1 - nextIndex]);
+    }
+  }, [userMessages]);
 
   const handleExpand = useCallback(() => {
     setHeight(HEIGHTS.small);
@@ -710,8 +928,30 @@ export default function ChatPanel({
 
   return (
     <>
+    {/* Skip Demo — top of screen, outside chat panel */}
+    {showDemo && (
+      <View style={[demoStyles.skipOverlay, { top: insets.top + 12 }]}>
+        <TouchableOpacity
+          style={[demoStyles.skipButtonTop, { borderColor: colors.primary }]}
+          onPress={handleSkipDemo}
+          activeOpacity={0.7}
+        >
+          <Text style={[demoStyles.skipTextTop, { color: colors.primary }]}>Skip Demo</Text>
+          <X size={14} color={colors.primary} />
+        </TouchableOpacity>
+      </View>
+    )}
+
     <InputAccessoryView nativeID={INPUT_ACCESSORY_ID}>
       <View style={styles.accessoryBar}>
+        <View style={styles.accessoryArrows}>
+          <TouchableOpacity onPress={handleHistoryUp} activeOpacity={0.7} style={styles.arrowButton}>
+            <ChevronUp size={18} color={userMessages.length > 0 ? colors.primary : staticColors.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleHistoryDown} activeOpacity={0.7} style={styles.arrowButton}>
+            <ChevronDown size={18} color={historyIndexRef.current > -1 ? colors.primary : staticColors.textMuted} />
+          </TouchableOpacity>
+        </View>
         <TouchableOpacity onPress={() => Keyboard.dismiss()} activeOpacity={0.7}>
           <Text style={[styles.doneButton, { color: colors.primary }]}>Done</Text>
         </TouchableOpacity>
@@ -727,7 +967,7 @@ export default function ChatPanel({
           styles.container,
           animatedPanelStyle,
           { bottom: insets.bottom + 12 },
-          !hasApiKey && { borderColor: colors.primary },
+          !showDemo && !hasApiKey && { borderColor: colors.primary },
         ]}
       >
         {/* Blur background — wrapped to clip within border radius */}
@@ -752,8 +992,54 @@ export default function ChatPanel({
           </GestureDetector>
         )}
 
+        {/* Demo mode — messages area */}
+        {showDemo && height > HEIGHTS.collapsed && (
+          <ScrollView
+            style={styles.messagesContainer}
+            contentContainerStyle={[styles.messagesList, { paddingBottom: 24 }]}
+            showsVerticalScrollIndicator={false}
+          >
+            {DEMO_SCRIPT.slice(0, isDemoUserStep ? demoStep : demoStep + 1).map((msg, i) => {
+              // For user steps: show messages up to (not including) current user message
+              // For agent steps: show messages up to and including current step
+              const isLatest = i === demoStep;
+              const isAgent = msg.role === 'agent';
+              const isUser = msg.role === 'user';
+              const displayText = (isLatest && isAgent) ? typedText : msg.content;
+              const isTyping = isLatest && isAgent && typedText.length < msg.content.length;
+
+              return (
+                <View key={`demo-${i}`} style={styles.messageContainer}>
+                  <View style={styles.messageRow}>
+                    <Text style={[
+                      styles.messageArrow,
+                      isUser ? styles.arrowUser : styles.arrowAgent,
+                      !isUser && { color: colors.primary },
+                    ]}>
+                      {isUser ? '\u2192' : '\u2190'}
+                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', flex: 1 }}>
+                      <Text style={[
+                        styles.messageText,
+                        isUser ? [styles.messageUser, { color: chatUserTextColor }]
+                               : [styles.messageAgent, { color: chatAgentTextColor }],
+                        { flex: 0, flexShrink: 1 },
+                      ]}>
+                        {displayText}
+                      </Text>
+                      {isTyping && (
+                        <Animated.View style={[demoStyles.cursor, cursorAnimStyle, { backgroundColor: colors.primary }]} />
+                      )}
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </ScrollView>
+        )}
+
         {/* Messages area */}
-        {showMessages && (
+        {!showDemo && showMessages && (
           <FlatList
             ref={listRef}
             data={messages}
@@ -765,8 +1051,8 @@ export default function ChatPanel({
           />
         )}
 
-        {/* Collapsed indicator - show when collapsed and has messages */}
-        {!showMessages && messages.length > 0 && height <= HEIGHTS.collapsed && (
+        {/* Collapsed indicator - show when collapsed and has messages (not during demo) */}
+        {!showDemo && !showMessages && messages.length > 0 && height <= HEIGHTS.collapsed && (
           <TouchableOpacity
             style={styles.expandButton}
             onPress={handleExpand}
@@ -778,8 +1064,30 @@ export default function ChatPanel({
           </TouchableOpacity>
         )}
 
-        {/* Input area */}
-        {!hasApiKey ? (
+        {/* Input area — during demo show input for user send steps, otherwise normal */}
+        {showDemo ? (
+          <View style={styles.inputArea} onLayout={handleInputAreaLayout}>
+            <View style={[styles.input, { borderBottomWidth: 1, borderBottomColor: staticColors.border, paddingBottom: 4, justifyContent: 'center', minHeight: 24 }]}>
+              <Text style={{ fontFamily: theme.fonts.regular, fontSize: 16, color: (isDemoUserStep && typedText) ? staticColors.textPrimary : staticColors.textMuted }}>
+                {(isDemoUserStep ? typedText : '') || (isDemoUserStep ? '...' : '')}
+              </Text>
+            </View>
+            <Animated.View style={waitingForUserSend ? sendGlowStyle : undefined}>
+              <TouchableOpacity
+                style={[
+                  styles.sendButton,
+                  !waitingForUserSend && styles.sendButtonDisabled,
+                  waitingForUserSend && { borderColor: colors.primary },
+                ]}
+                onPress={handleDemoSend}
+                disabled={!waitingForUserSend}
+                activeOpacity={0.7}
+              >
+                <Send size={18} color={waitingForUserSend ? colors.primary : staticColors.textMuted} />
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+        ) : !hasApiKey ? (
           <View style={styles.apiKeyPrompt} onLayout={handleInputAreaLayout}>
             <Text style={styles.apiKeyLabel}>
               ENTER YOUR OPENAI API KEY IN SETTINGS / DEVELOPER, OR BELOW
@@ -799,12 +1107,12 @@ export default function ChatPanel({
                 inputAccessoryViewID={INPUT_ACCESSORY_ID}
               />
               <TouchableOpacity
-                style={[styles.apiKeySaveButton, { backgroundColor: apiKeyInput.trim() ? colors.primary : staticColors.border }]}
+                style={[styles.apiKeySaveButton, { borderColor: apiKeyInput.trim() ? colors.primary : staticColors.border }]}
                 onPress={handleSaveApiKey}
                 disabled={!apiKeyInput.trim()}
                 activeOpacity={0.7}
               >
-                <Check size={16} color={apiKeyInput.trim() ? '#000' : staticColors.textMuted} />
+                <Check size={16} color={apiKeyInput.trim() ? colors.primary : staticColors.textMuted} />
               </TouchableOpacity>
             </View>
           </View>
@@ -885,18 +1193,15 @@ const styles = StyleSheet.create({
     zIndex: 900,
   },
   container: {
-    borderRadius: 12,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 32,
-    elevation: 20,
+    borderColor: staticColors.border,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   blurWrapper: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 11,
+    borderRadius: 4,
     overflow: 'hidden',
   },
   dragHandleContainer: {
@@ -904,7 +1209,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: staticColors.border,
     paddingTop: 12,
     marginTop: -12,
   },
@@ -912,7 +1217,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 5,
     backgroundColor: staticColors.textMuted,
-    borderRadius: 3,
+    borderRadius: 2,
     opacity: 0.5,
   },
   messagesContainer: {
@@ -974,7 +1279,7 @@ const styles = StyleSheet.create({
   optionButton: {
     borderWidth: 1,
     borderColor: staticColors.border,
-    borderRadius: 6,
+    borderRadius: 2,
     paddingVertical: 8,
     paddingHorizontal: 14,
   },
@@ -985,7 +1290,7 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     borderWidth: 1,
-    borderRadius: 6,
+    borderRadius: 2,
     paddingVertical: 8,
     paddingHorizontal: 20,
   },
@@ -996,7 +1301,7 @@ const styles = StyleSheet.create({
   cancelButton: {
     borderWidth: 1,
     borderColor: staticColors.border,
-    borderRadius: 6,
+    borderRadius: 2,
     paddingVertical: 8,
     paddingHorizontal: 20,
   },
@@ -1013,7 +1318,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: staticColors.border,
   },
   expandArrow: {
     fontFamily: theme.fonts.regular,
@@ -1053,14 +1358,17 @@ const styles = StyleSheet.create({
     color: staticColors.textPrimary,
     borderWidth: 1,
     borderColor: staticColors.border,
-    borderRadius: 8,
+    borderRadius: 2,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   apiKeySaveButton: {
     width: 36,
     height: 36,
-    borderRadius: 8,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1091,14 +1399,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: staticColors.border,
   },
   sendButtonDisabled: {
     opacity: 0.4,
   },
   accessoryBar: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: staticColors.surface,
     borderTopWidth: 1,
@@ -1106,9 +1414,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
+  accessoryArrows: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  arrowButton: {
+    padding: 4,
+  },
   doneButton: {
     fontFamily: theme.fonts.semibold,
-    fontSize: 15,
+    fontSize: 14,
     paddingVertical: 4,
     paddingHorizontal: 8,
   },
@@ -1119,7 +1435,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(10, 10, 10, 0.95)',
+    backgroundColor: 'rgba(13, 13, 13, 0.85)',
     paddingLeft: 58, // clears mic button area
     paddingRight: 8,
     overflow: 'hidden',
@@ -1137,8 +1453,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 8,
+    borderColor: staticColors.border,
+    borderRadius: 2,
     marginLeft: 8,
   },
 });
@@ -1155,9 +1471,9 @@ const planStyles = StyleSheet.create({
   groupCard: {
     borderWidth: 1,
     borderColor: staticColors.border,
-    borderRadius: 8,
+    borderRadius: 2,
     padding: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: 'transparent',
   },
   groupSkipped: {
     opacity: 0.5,
@@ -1220,7 +1536,7 @@ const planStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     borderWidth: 1,
-    borderRadius: 6,
+    borderRadius: 2,
     paddingVertical: 6,
     paddingHorizontal: 12,
   },
@@ -1234,7 +1550,7 @@ const planStyles = StyleSheet.create({
     gap: 4,
     borderWidth: 1,
     borderColor: staticColors.border,
-    borderRadius: 6,
+    borderRadius: 2,
     paddingVertical: 6,
     paddingHorizontal: 12,
   },
@@ -1265,7 +1581,7 @@ const planStyles = StyleSheet.create({
   approveAllButton: {
     borderWidth: 1,
     borderColor: staticColors.border,
-    borderRadius: 6,
+    borderRadius: 2,
     paddingVertical: 8,
     paddingHorizontal: 14,
   },
@@ -1275,17 +1591,18 @@ const planStyles = StyleSheet.create({
     color: staticColors.textPrimary,
   },
   executeButton: {
-    borderRadius: 6,
+    borderRadius: 2,
     paddingVertical: 8,
     paddingHorizontal: 14,
+    borderWidth: 1,
   },
   executeButtonDisabled: {
-    backgroundColor: staticColors.border,
+    borderColor: staticColors.border,
   },
   executeText: {
     fontFamily: theme.fonts.medium,
     fontSize: 12,
-    color: staticColors.bg,
+    color: staticColors.primary,
   },
   executeTextDisabled: {
     color: staticColors.textMuted,
@@ -1293,7 +1610,7 @@ const planStyles = StyleSheet.create({
   cancelPlanButton: {
     borderWidth: 1,
     borderColor: staticColors.border,
-    borderRadius: 6,
+    borderRadius: 2,
     paddingVertical: 8,
     paddingHorizontal: 14,
   },
@@ -1325,5 +1642,34 @@ const planStyles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
     fontSize: 12,
     color: staticColors.success,
+  },
+});
+
+const demoStyles = StyleSheet.create({
+  cursor: {
+    width: 1,
+    height: 14,
+    marginLeft: 1,
+    marginBottom: -2,
+  },
+  skipOverlay: {
+    position: 'absolute',
+    right: 20,
+    zIndex: 1000,
+  },
+  skipButtonTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderRadius: 2,
+    backgroundColor: 'rgba(13, 13, 13, 0.85)',
+  },
+  skipTextTop: {
+    fontFamily: theme.fonts.semibold,
+    fontSize: 13,
+    letterSpacing: 0.5,
   },
 });

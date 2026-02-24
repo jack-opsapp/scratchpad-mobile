@@ -166,7 +166,7 @@ export default function NoteCard({
           onPress={handleDelete}
           activeOpacity={0.8}
         >
-          <Trash2 size={20} color="#fff" />
+          <Trash2 size={20} color={staticColors.textPrimary} />
         </TouchableOpacity>
 
         {/* Note card */}
@@ -314,9 +314,9 @@ const styles = StyleSheet.create({
     marginLeft: -6,
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderWidth: 2,
+    width: 16,
+    height: 16,
+    borderWidth: 1,
     borderColor: staticColors.border,
     justifyContent: 'center',
     alignItems: 'center',
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   tag: {
     borderWidth: 1,
     borderColor: staticColors.border,
-    paddingVertical: 3,
+    paddingVertical: 2,
     paddingHorizontal: 8,
   },
   tagText: {
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontFamily: theme.fonts.regular,
-    fontSize: 12,
+    fontSize: 11,
     color: staticColors.textMuted,
   },
   avatar: {

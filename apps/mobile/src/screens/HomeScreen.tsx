@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { ChevronRight, Star } from 'lucide-react-native';
 import { useDataStore } from '../stores/dataStore';
 import { colors as staticColors, theme } from '../styles';
+import { useTheme } from '../contexts/ThemeContext';
 import type { PageWithSections } from '@slate/shared';
 import type { RootStackScreenProps } from '../navigation/types';
 
@@ -20,6 +21,7 @@ type NavigationProp = RootStackScreenProps<'Main'>['navigation'];
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const colors = useTheme();
   const { pages, loading, error, fetchData, refreshData } = useDataStore();
 
   useEffect(() => {
@@ -131,8 +133,8 @@ const styles = StyleSheet.create({
     borderBottomColor: staticColors.border,
   },
   headerTitle: {
+    fontFamily: theme.fonts.semibold,
     fontSize: theme.fontSize.xs,
-    fontWeight: theme.fontWeight.medium,
     color: staticColors.textMuted,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
@@ -144,6 +146,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
   },
   errorText: {
+    fontFamily: theme.fonts.regular,
     color: staticColors.danger,
     fontSize: theme.fontSize.sm,
   },
@@ -171,11 +174,12 @@ const styles = StyleSheet.create({
     marginRight: theme.spacing.xs,
   },
   pageName: {
+    fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.lg,
-    fontWeight: theme.fontWeight.normal,
     color: staticColors.textPrimary,
   },
   pageStats: {
+    fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.sm,
     color: staticColors.textMuted,
     marginTop: theme.spacing.xs,
@@ -187,12 +191,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xl,
   },
   emptyTitle: {
+    fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.lg,
-    fontWeight: theme.fontWeight.normal,
     color: staticColors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   emptySubtitle: {
+    fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.md,
     color: staticColors.textMuted,
     textAlign: 'center',

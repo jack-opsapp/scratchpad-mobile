@@ -51,8 +51,8 @@ const styles = StyleSheet.create({
     borderBottomColor: staticColors.border,
   },
   headerTitle: {
+    fontFamily: theme.fonts.semibold,
     fontSize: theme.fontSize.xs,
-    fontWeight: theme.fontWeight.medium,
     color: staticColors.textMuted,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
@@ -68,12 +68,14 @@ const styles = StyleSheet.create({
     maxWidth: 280,
   },
   emptyTitle: {
+    fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.lg,
     color: staticColors.textPrimary,
     marginBottom: theme.spacing.sm,
     textAlign: 'center',
   },
   emptySubtitle: {
+    fontFamily: theme.fonts.regular,
     fontSize: theme.fontSize.md,
     color: staticColors.textMuted,
     textAlign: 'center',
@@ -93,6 +95,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    fontFamily: theme.fonts.regular,
     color: staticColors.textPrimary,
     fontSize: theme.fontSize.base,
     paddingHorizontal: theme.spacing.md,

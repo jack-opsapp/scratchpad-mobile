@@ -30,8 +30,8 @@ export default function MainNavigator() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: staticColors.textMuted,
         tabBarLabelStyle: {
-          fontSize: theme.fontSize.xxs,
-          fontWeight: theme.fontWeight.medium,
+          fontFamily: theme.fonts.medium,
+          fontSize: theme.fontSize.xs,
           letterSpacing: 0.5,
           textTransform: 'uppercase',
         },

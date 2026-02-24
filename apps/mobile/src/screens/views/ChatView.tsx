@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Send, Mic } from 'lucide-react-native';
 import { colors as staticColors, theme } from '../../styles';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface Message {
   id: string;
@@ -22,6 +23,7 @@ interface Message {
 
 export default function ChatView() {
   const insets = useSafeAreaInsets();
+  const colors = useTheme();
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const inputRef = useRef<TextInput>(null);
@@ -187,7 +189,7 @@ const styles = StyleSheet.create({
   },
   messageText: {
     fontFamily: theme.fonts.regular,
-    fontSize: 15,
+    fontSize: 14,
     lineHeight: 22,
   },
   userMessageText: {
@@ -213,7 +215,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: theme.fonts.regular,
     color: staticColors.textPrimary,
-    fontSize: 15,
+    fontSize: 16,
     paddingHorizontal: 14,
     paddingVertical: 12,
     maxHeight: 120,

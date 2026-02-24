@@ -112,6 +112,23 @@ export default function MainScreen() {
     fetchData();
   }, []);
 
+  // Show welcome dialog when demo completes and no API key is set
+  const demoWasActive = useRef(!settings.demo_complete);
+  useEffect(() => {
+    if (demoWasActive.current && settings.demo_complete) {
+      demoWasActive.current = false;
+      if (!settings.custom_openai_key) {
+        setTimeout(() => {
+          Alert.alert(
+            'Welcome to Slate',
+            'To get started, enter your OpenAI API key in the chat box below.',
+            [{ text: 'OK' }],
+          );
+        }, 500);
+      }
+    }
+  }, [settings.demo_complete, settings.custom_openai_key]);
+
   // Apply default page on first data load
   useEffect(() => {
     if (hasAppliedDefault.current) return;
@@ -425,6 +442,74 @@ export default function MainScreen() {
     });
     chatState.addAgentMessage('Plan cancelled.', 'text_response');
   }, [chatState]);
+
+  // ====== Demo data lifecycle ======
+  const demoDataRef = useRef<{ pageId?: string; sectionId?: string; noteId?: string }>({});
+
+  const handleDemoCreateData = useCallback(async () => {
+    if (!user) return;
+    try {
+      // Create demo page
+      const { data: page, error: pageErr } = await supabase
+        .from('pages')
+        .insert({ name: 'Work Projects', user_id: user.id, position: pages.length })
+        .select()
+        .single();
+      if (pageErr || !page) return;
+      demoDataRef.current.pageId = page.id;
+
+      // Create default section
+      const { data: section, error: secErr } = await supabase
+        .from('sections')
+        .insert({ name: 'General', page_id: page.id, position: 0 })
+        .select()
+        .single();
+      if (secErr || !section) return;
+      demoDataRef.current.sectionId = section.id;
+
+      // Create demo note
+      const { data: note, error: noteErr } = await supabase
+        .from('notes')
+        .insert({
+          content: 'Review the Q3 budget report',
+          section_id: section.id,
+          tags: ['urgent'],
+          created_by_user_id: user.id,
+        })
+        .select()
+        .single();
+      if (!noteErr && note) {
+        demoDataRef.current.noteId = note.id;
+      }
+
+      // Refresh data and navigate to the new page
+      await refreshData();
+      setCurrentPageId(page.id);
+      setCurrentSectionId(section.id);
+    } catch (e) {
+      console.error('Demo data creation failed:', e);
+    }
+  }, [user, pages.length, refreshData]);
+
+  const handleDemoCleanupData = useCallback(async () => {
+    const { pageId, noteId, sectionId } = demoDataRef.current;
+    try {
+      if (noteId) await supabase.from('notes').delete().eq('id', noteId);
+      if (sectionId) await supabase.from('sections').delete().eq('id', sectionId);
+      if (pageId) await supabase.from('pages').delete().eq('id', pageId);
+      demoDataRef.current = {};
+      await refreshData();
+      // Navigate back to first page or null
+      if (pages.length > 0) {
+        const firstNonDemo = pages.find(p => p.id !== pageId);
+        setCurrentPageId(firstNonDemo?.id || null);
+      } else {
+        setCurrentPageId(null);
+      }
+    } catch (e) {
+      console.error('Demo data cleanup failed:', e);
+    }
+  }, [pages, refreshData]);
 
   const executePlanGroup = useCallback(async (
     actions: PlanAction[],
@@ -923,6 +1008,14 @@ export default function MainScreen() {
           </GestureDetector>
         )}
 
+        {/* Block all interaction outside chat during demo */}
+        {!settings.demo_complete && (
+          <View
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 899 }}
+            pointerEvents="box-only"
+          />
+        )}
+
         {/* Floating chat panel - hidden when sidebar open */}
         <ChatPanel
           visible={!sidebarOpen}
@@ -935,6 +1028,8 @@ export default function MainScreen() {
           onPlanApproveAll={handlePlanApproveAll}
           onPlanExecute={handlePlanExecute}
           onPlanCancel={handlePlanCancel}
+          onDemoCreateData={handleDemoCreateData}
+          onDemoCleanupData={handleDemoCleanupData}
         />
 
         {/* Sidebar overlay */}

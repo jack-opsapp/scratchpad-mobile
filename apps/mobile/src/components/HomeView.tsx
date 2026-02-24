@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   },
   notePreviewText: {
     fontFamily: theme.fonts.regular,
-    fontSize: 12,
+    fontSize: 11,
     color: staticColors.textMuted,
     lineHeight: 18,
   },

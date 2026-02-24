@@ -146,24 +146,24 @@ export default function ShareSheet({
   useEffect(() => {
     if (visible && user?.id) {
       loadShareData(pageId, user.id);
-      translateY.value = withTiming(0, { duration: 300 });
-      overlayOpacity.value = withTiming(0.5, { duration: 300 });
+      translateY.value = withTiming(0, { duration: 250 });
+      overlayOpacity.value = withTiming(0.5, { duration: 250 });
     } else {
-      translateY.value = withTiming(SCREEN_HEIGHT, { duration: 300 });
-      overlayOpacity.value = withTiming(0, { duration: 300 });
+      translateY.value = withTiming(SCREEN_HEIGHT, { duration: 250 });
+      overlayOpacity.value = withTiming(0, { duration: 250 });
     }
   }, [visible, pageId, user?.id]);
 
   const handleClose = () => {
-    translateY.value = withTiming(SCREEN_HEIGHT, { duration: 300 });
-    overlayOpacity.value = withTiming(0, { duration: 300 });
+    translateY.value = withTiming(SCREEN_HEIGHT, { duration: 250 });
+    overlayOpacity.value = withTiming(0, { duration: 250 });
     setTimeout(() => {
       reset();
       setEmail('');
       setInviteRole('team');
       setLinkPassword('');
       onClose();
-    }, 300);
+    }, 250);
   };
 
   const panGesture = Gesture.Pan()
@@ -183,12 +183,12 @@ export default function ShareSheet({
         event.translationY > SWIPE_THRESHOLD ||
         event.velocityY > 500
       ) {
-        translateY.value = withTiming(SCREEN_HEIGHT, { duration: 300 });
-        overlayOpacity.value = withTiming(0, { duration: 300 });
+        translateY.value = withTiming(SCREEN_HEIGHT, { duration: 250 });
+        overlayOpacity.value = withTiming(0, { duration: 250 });
         runOnJS(handleClose)();
       } else {
-        translateY.value = withTiming(0, { duration: 300 });
-        overlayOpacity.value = withTiming(0.5, { duration: 300 });
+        translateY.value = withTiming(0, { duration: 250 });
+        overlayOpacity.value = withTiming(0.5, { duration: 250 });
       }
     });
 
@@ -314,15 +314,15 @@ export default function ShareSheet({
                       <TouchableOpacity
                         style={[
                           styles.sendButton,
-                          { backgroundColor: colors.primary },
+                          { borderColor: colors.primary },
                           (!email.trim() || sending) && styles.sendButtonDisabled,
                         ]}
                         onPress={handleInvite}
                         disabled={!email.trim() || sending}
                         activeOpacity={0.7}
                       >
-                        <Send size={14} color={staticColors.bg} />
-                        <Text style={styles.sendButtonText}>
+                        <Send size={14} color={colors.primary} />
+                        <Text style={[styles.sendButtonText, { color: colors.primary }]}>
                           {sending ? 'Sending...' : 'Send'}
                         </Text>
                       </TouchableOpacity>
@@ -453,12 +453,12 @@ export default function ShareSheet({
                           autoCapitalize="none"
                         />
                         <TouchableOpacity
-                          style={[styles.generateButton, { backgroundColor: colors.primary }]}
+                          style={[styles.generateButton, { borderColor: colors.primary }]}
                           onPress={() => createPublicLink(linkPassword || undefined)}
                           activeOpacity={0.7}
                         >
-                          <Link2 size={14} color={staticColors.bg} />
-                          <Text style={styles.generateButtonText}>
+                          <Link2 size={14} color={colors.primary} />
+                          <Text style={[styles.generateButtonText, { color: colors.primary }]}>
                             Generate Public Link
                           </Text>
                         </TouchableOpacity>
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000000',
+    backgroundColor: staticColors.bg,
   },
   sheet: {
     position: 'absolute',
@@ -638,7 +638,7 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: theme.fonts.regular,
     fontSize: 13,
-    color: '#ffffff',
+    color: staticColors.textPrimary,
   },
   loadingContainer: {
     padding: 40,
@@ -691,6 +691,9 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
     paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    backgroundColor: 'transparent',
   },
   sendButtonDisabled: {
     opacity: 0.5,
@@ -698,7 +701,7 @@ const styles = StyleSheet.create({
   sendButtonText: {
     fontFamily: theme.fonts.semibold,
     fontSize: 13,
-    color: staticColors.bg,
+    color: staticColors.textPrimary,
   },
   collabRow: {
     flexDirection: 'row',
@@ -793,11 +796,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    backgroundColor: 'transparent',
   },
   generateButtonText: {
     fontFamily: theme.fonts.semibold,
     fontSize: 13,
-    color: staticColors.bg,
+    color: staticColors.textPrimary,
   },
   publicToggleRow: {
     flexDirection: 'row',

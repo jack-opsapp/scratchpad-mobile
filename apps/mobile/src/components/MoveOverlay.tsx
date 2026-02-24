@@ -131,7 +131,6 @@ export default function MoveOverlay({
               left: Math.max(12, Math.min(dragX - 100, SCREEN_WIDTH - PANEL_WIDTH - 220)),
               top: dragY - 24,
               borderColor: colors.primary,
-              shadowColor: colors.primary,
             },
           ]}
         >
@@ -160,7 +159,7 @@ export default function MoveOverlay({
                   ref={setSectionRef(section.id, page.name, section.name)}
                   style={[
                     styles.sectionTarget,
-                    isHovered(section.id) && { borderColor: colors.primary, backgroundColor: 'rgba(209, 177, 143, 0.1)' },
+                    isHovered(section.id) && { borderColor: colors.primary, backgroundColor: `${colors.primary}1A` },
                   ]}
                 >
                   <View
@@ -191,21 +190,17 @@ export default function MoveOverlay({
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
+    backgroundColor: staticColors.bg,
   },
   floatingNote: {
     position: 'absolute',
     width: 200,
     backgroundColor: staticColors.surface,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 2,
     paddingVertical: 10,
     paddingHorizontal: 14,
     zIndex: 10,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 10,
   },
   floatingNoteText: {
     fontFamily: theme.fonts.regular,
@@ -257,7 +252,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 12,
     paddingHorizontal: 12,
-    borderRadius: 6,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: 'transparent',
     marginBottom: 2,

@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   },
   pageName: {
     fontFamily: theme.fonts.regular,
-    fontSize: 16,
+    fontSize: theme.fontSize.md,
     color: staticColors.textPrimary,
   },
   pageStats: {

@@ -27,7 +27,7 @@ function AnimatedHamburger({ isOpen }: { isOpen: boolean }) {
   const progress = useSharedValue(0);
 
   useEffect(() => {
-    progress.value = withTiming(isOpen ? 1 : 0, { duration: 300 });
+    progress.value = withTiming(isOpen ? 1 : 0, { duration: 250 });
   }, [isOpen, progress]);
 
   const topBarStyle = useAnimatedStyle(() => ({
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   },
   breadcrumbText: {
     fontFamily: theme.fonts.semibold,
-    fontSize: 15,
+    fontSize: 14,
     color: staticColors.textPrimary,
   },
   breadcrumbMuted: {

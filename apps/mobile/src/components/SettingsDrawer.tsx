@@ -42,6 +42,8 @@ import {
   EyeOff,
   Copy,
   Check,
+  Plus,
+  X,
   Palette,
   Type,
   Layout,
@@ -119,7 +121,7 @@ function SegmentedControl<T extends string | number>({
           key={String(opt.value)}
           style={[
             segStyles.segment,
-            value === opt.value && { borderColor: '#ffffff', borderWidth: 1 },
+            value === opt.value && { borderColor: staticColors.textPrimary, borderWidth: 1 },
           ]}
           onPress={() => onChange(opt.value)}
           activeOpacity={0.7}
@@ -127,7 +129,7 @@ function SegmentedControl<T extends string | number>({
           <Text
             style={[
               segStyles.segmentText,
-              value === opt.value && { fontFamily: theme.fonts.semibold, color: '#ffffff' },
+              value === opt.value && { fontFamily: theme.fonts.semibold, color: staticColors.textPrimary },
             ]}
           >
             {opt.label}
@@ -308,10 +310,10 @@ function BrightnessSlider({
   return (
     <View style={sliderStyles.container}>
       <View style={sliderStyles.track}>
-        <Animated.View style={[sliderStyles.fill, { backgroundColor: '#aaaaaa' }, fillStyle]} />
+        <Animated.View style={[sliderStyles.fill, { backgroundColor: staticColors.textSecondary }, fillStyle]} />
         <GestureDetector gesture={panGesture}>
           <Animated.View style={[sliderStyles.thumb, thumbStyle]}>
-            <View style={[sliderStyles.thumbInner, { backgroundColor: '#aaaaaa' }]} />
+            <View style={[sliderStyles.thumbInner, { backgroundColor: staticColors.textSecondary }]} />
           </Animated.View>
         </GestureDetector>
       </View>
@@ -334,6 +336,16 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
   const [currentSection, setCurrentSection] = useState<SettingsSection>(null);
   const [showApiKey, setShowApiKey] = useState(false);
   const [copiedUserId, setCopiedUserId] = useState(false);
+
+  // API Keys state
+  const [apiKeys, setApiKeys] = useState<Array<{ id: string; name: string; key_raw: string | null; created_at: string; last_used_at: string | null }>>([]);
+  const [apiKeysLoading, setApiKeysLoading] = useState(false);
+  const [showKeyForm, setShowKeyForm] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [generatingKey, setGeneratingKey] = useState(false);
+  const [revealedNewKey, setRevealedNewKey] = useState<string | null>(null);
+  const [revealedKeyId, setRevealedKeyId] = useState<string | null>(null);
+  const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
   const [clearingMemory, setClearingMemory] = useState(false);
   const [memoryCleared, setMemoryCleared] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
@@ -371,16 +383,16 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
   useEffect(() => {
     if (isOpen) {
       fetchSettings();
-      translateX.value = withTiming(0, { duration: 300 });
-      overlayOpacity.value = withTiming(0.5, { duration: 300 });
+      translateX.value = withTiming(0, { duration: 250 });
+      overlayOpacity.value = withTiming(0.5, { duration: 250 });
     } else {
-      translateX.value = withTiming(-SCREEN_WIDTH, { duration: 300 });
-      overlayOpacity.value = withTiming(0, { duration: 300 });
+      translateX.value = withTiming(-SCREEN_WIDTH, { duration: 250 });
+      overlayOpacity.value = withTiming(0, { duration: 250 });
       // Reset to main menu when closing and clear pending changes
       setTimeout(() => {
         setCurrentSection(null);
         setPendingChanges({});
-      }, 300);
+      }, 250);
     }
   }, [isOpen, translateX, overlayOpacity]);
 
@@ -398,12 +410,12 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
     })
     .onEnd((event) => {
       if (event.translationX < -SWIPE_THRESHOLD * 2 || event.velocityX < -500) {
-        translateX.value = withTiming(-SCREEN_WIDTH, { duration: 300 });
-        overlayOpacity.value = withTiming(0, { duration: 300 });
+        translateX.value = withTiming(-SCREEN_WIDTH, { duration: 250 });
+        overlayOpacity.value = withTiming(0, { duration: 250 });
         runOnJS(onClose)();
       } else {
-        translateX.value = withTiming(0, { duration: 300 });
-        overlayOpacity.value = withTiming(0.5, { duration: 300 });
+        translateX.value = withTiming(0, { duration: 250 });
+        overlayOpacity.value = withTiming(0.5, { duration: 250 });
       }
     });
 
@@ -447,6 +459,98 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
       setCopiedUserId(true);
       setTimeout(() => setCopiedUserId(false), 2000);
     }
+  };
+
+  // ── API Keys helpers ──────────────────────────────────────────────
+  const fetchApiKeys = async () => {
+    if (!user?.id) return;
+    setApiKeysLoading(true);
+    try {
+      const { data } = await supabase
+        .from('api_keys')
+        .select('id, name, key_raw, created_at, last_used_at, revoked_at')
+        .is('revoked_at', null)
+        .order('created_at', { ascending: false });
+      setApiKeys(data || []);
+    } catch {} finally {
+      setApiKeysLoading(false);
+    }
+  };
+
+  const handleGenerateKey = async () => {
+    if (!newKeyName.trim()) return;
+    setGeneratingKey(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Not authenticated');
+
+      const response = await fetch(`${API_BASE}/api/v1/keys`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ name: newKeyName.trim() }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to generate key');
+
+      setRevealedNewKey(data.key);
+      setNewKeyName('');
+      setShowKeyForm(false);
+      fetchApiKeys();
+    } catch (err: any) {
+      Alert.alert('Error', 'Failed to generate key: ' + (err.message || 'Unknown error'));
+    } finally {
+      setGeneratingKey(false);
+    }
+  };
+
+  const handleRevokeKey = (keyId: string) => {
+    Alert.alert(
+      'Revoke API Key',
+      'Any tools using this key will stop working immediately.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Revoke',
+          style: 'destructive',
+          onPress: async () => {
+            await supabase
+              .from('api_keys')
+              .update({ revoked_at: new Date().toISOString() })
+              .eq('id', keyId);
+            setApiKeys(prev => prev.filter(k => k.id !== keyId));
+          },
+        },
+      ],
+    );
+  };
+
+  const handleCopyKey = async (key: string, keyId: string) => {
+    try {
+      await Share.share({ message: key });
+    } catch {}
+    setCopiedKeyId(keyId);
+    setTimeout(() => setCopiedKeyId(null), 2000);
+  };
+
+  const formatKeyDate = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const formatKeyLastUsed = (iso: string | null) => {
+    if (!iso) return 'Never used';
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `Used ${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `Used ${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `Used ${days}d ago`;
   };
 
   const handleDeleteAccount = () => {
@@ -667,7 +771,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                 <Text style={styles.revertButtonText}>REVERT CHANGES</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.saveButton, { backgroundColor: colors.primary }]}
+                style={[styles.saveButton, { borderColor: colors.primary }]}
                 onPress={handleSaveChanges}
                 activeOpacity={0.7}
               >
@@ -791,7 +895,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
 
                   <TouchableOpacity
                     style={styles.menuItem}
-                    onPress={() => setCurrentSection('developer')}
+                    onPress={() => { setCurrentSection('developer'); fetchApiKeys(); }}
                     activeOpacity={0.7}
                   >
                     <Key size={20} color={staticColors.textMuted} />
@@ -825,6 +929,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                 <View style={[
                   styles.previewCard,
                   {
+                    // Preview-only: intentionally hardcoded for theme preview
                     backgroundColor: effectiveSettings.theme === 'dark' ? '#1a1a1a' : '#f5f5f5',
                     borderColor: effectiveSettings.theme === 'dark' ? '#2a2a2a' : '#e0e0e0',
                   }
@@ -837,6 +942,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                     <Text style={[
                       styles.previewTitle,
                       {
+                        // Preview-only: intentionally hardcoded for theme preview
                         color: effectiveSettings.theme === 'dark' ? '#e8e8e8' : '#1a1a1a',
                         fontSize: effectiveSettings.font_size === 'small' ? 14 : effectiveSettings.font_size === 'large' ? 18 : 16,
                       }
@@ -847,6 +953,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                   <Text style={[
                     styles.previewText,
                     {
+                      // Preview-only: intentionally hardcoded for theme preview
                       color: effectiveSettings.theme === 'dark' ? '#a0a0a0' : '#666666',
                       fontSize: effectiveSettings.font_size === 'small' ? 12 : effectiveSettings.font_size === 'large' ? 16 : 14,
                     }
@@ -857,6 +964,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                     <View style={[
                       styles.previewTag,
                       {
+                        // Preview-only: intentionally hardcoded for theme preview
                         backgroundColor: effectiveSettings.theme === 'dark' ? '#2a2a2a' : '#e8e8e8',
                         borderColor: ACCENT_COLORS[effectiveSettings.accent_color]?.primary || colors.primary,
                       }
@@ -915,7 +1023,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                         style={{
                           width: 36,
                           height: 36,
-                          borderRadius: 4,
+                          borderRadius: 2,
                           backgroundColor: color.primary,
                           borderWidth: effectiveSettings.accent_color === key ? 2 : 0,
                           borderColor: staticColors.textPrimary,
@@ -924,7 +1032,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                         }}
                       >
                         {effectiveSettings.accent_color === key && (
-                          <Check size={14} color="#fff" />
+                          <Check size={14} color={staticColors.textPrimary} />
                         )}
                       </TouchableOpacity>
                     ))}
@@ -993,7 +1101,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                 {/* Agent Text Color */}
                 <View style={rowStyles.container}>
                   <View style={rowStyles.header}>
-                    <View style={{ width: 16, height: 16, borderRadius: 3, backgroundColor: computePreviewColor(effectiveSettings.chat_agent_text_mode, effectiveSettings.chat_agent_text_brightness, colors.primary), borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }} />
+                    <View style={{ width: 16, height: 16, borderRadius: 2, backgroundColor: computePreviewColor(effectiveSettings.chat_agent_text_mode, effectiveSettings.chat_agent_text_brightness, colors.primary), borderWidth: 1, borderColor: staticColors.border }} />
                     <View style={rowStyles.labelContainer}>
                       <Text style={rowStyles.label}>Agent Text Color</Text>
                     </View>
@@ -1019,7 +1127,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                 {/* User Text Color */}
                 <View style={rowStyles.container}>
                   <View style={rowStyles.header}>
-                    <View style={{ width: 16, height: 16, borderRadius: 3, backgroundColor: computePreviewColor(effectiveSettings.chat_user_text_mode, effectiveSettings.chat_user_text_brightness, colors.primary), borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }} />
+                    <View style={{ width: 16, height: 16, borderRadius: 2, backgroundColor: computePreviewColor(effectiveSettings.chat_user_text_mode, effectiveSettings.chat_user_text_brightness, colors.primary), borderWidth: 1, borderColor: staticColors.border }} />
                     <View style={rowStyles.labelContainer}>
                       <Text style={rowStyles.label}>User Text Color</Text>
                     </View>
@@ -1045,8 +1153,8 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                 {/* Chat Background */}
                 <View style={rowStyles.container}>
                   <View style={rowStyles.header}>
-                    <View style={{ width: 16, height: 16, borderRadius: 3, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
-                      <View style={{ flex: 1, backgroundColor: effectiveSettings.chat_background_mode === 'accent' ? colors.primary : '#000000', opacity: effectiveSettings.chat_background_brightness / 100 || 0.08 }} />
+                    <View style={{ width: 16, height: 16, borderRadius: 2, borderWidth: 1, borderColor: staticColors.border, overflow: 'hidden' }}>
+                      <View style={{ flex: 1, backgroundColor: effectiveSettings.chat_background_mode === 'accent' ? colors.primary : staticColors.bg, opacity: effectiveSettings.chat_background_brightness / 100 || 0.08 }} />
                     </View>
                     <View style={rowStyles.labelContainer}>
                       <Text style={rowStyles.label}>Chat Background</Text>
@@ -1410,7 +1518,257 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
             {/* ===== DEVELOPER ===== */}
             {currentSection === 'developer' && (
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>DEVELOPER</Text>
+              <Text style={styles.sectionLabel}>SLATE API KEYS</Text>
+              <Text style={{ fontFamily: theme.fonts.regular, fontSize: 12, color: staticColors.textMuted, marginBottom: 12, lineHeight: 18 }}>
+                Use these keys to connect Claude Code or other tools to your Slate workspace.
+              </Text>
+
+              {/* Generate new key button / form */}
+              {!showKeyForm && !revealedNewKey && (
+                <TouchableOpacity
+                  onPress={() => setShowKeyForm(true)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    paddingVertical: 10,
+                    borderWidth: 1,
+                    borderColor: staticColors.border,
+                    marginBottom: 12,
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Plus size={14} color={staticColors.textPrimary} />
+                  <Text style={{ fontFamily: theme.fonts.medium, fontSize: 13, color: staticColors.textPrimary }}>
+                    Generate New Key
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Key name form */}
+              {showKeyForm && (
+                <View style={{
+                  padding: 12,
+                  backgroundColor: staticColors.surface,
+                  borderWidth: 1,
+                  borderColor: staticColors.border,
+                  marginBottom: 12,
+                  gap: 10,
+                }}>
+                  <TextInput
+                    style={{
+                      fontFamily: theme.fonts.regular,
+                      fontSize: 13,
+                      color: staticColors.textPrimary,
+                      paddingVertical: 8,
+                      paddingHorizontal: 10,
+                      borderWidth: 1,
+                      borderColor: staticColors.border,
+                    }}
+                    value={newKeyName}
+                    onChangeText={setNewKeyName}
+                    placeholder='e.g. "Claude Code - MacBook"'
+                    placeholderTextColor={staticColors.textMuted}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoFocus
+                    onSubmitEditing={handleGenerateKey}
+                  />
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity
+                      onPress={handleGenerateKey}
+                      disabled={generatingKey || !newKeyName.trim()}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 10,
+                        alignItems: 'center',
+                        backgroundColor: newKeyName.trim() ? colors.primary : staticColors.border,
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={{
+                        fontFamily: theme.fonts.semibold,
+                        fontSize: 13,
+                        color: newKeyName.trim() ? staticColors.bg : staticColors.textMuted,
+                      }}>
+                        {generatingKey ? 'Generating...' : 'Create'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => { setShowKeyForm(false); setNewKeyName(''); }}
+                      style={{
+                        paddingVertical: 10,
+                        paddingHorizontal: 16,
+                        borderWidth: 1,
+                        borderColor: staticColors.border,
+                        alignItems: 'center',
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={{ fontFamily: theme.fonts.regular, fontSize: 13, color: staticColors.textMuted }}>
+                        Cancel
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {/* Newly created key (shown once) */}
+              {revealedNewKey && (
+                <View style={{
+                  padding: 14,
+                  backgroundColor: `${staticColors.success}12`,
+                  borderWidth: 1,
+                  borderColor: `${staticColors.success}40`,
+                  marginBottom: 12,
+                  gap: 8,
+                }}>
+                  <Text style={{ fontFamily: theme.fonts.semibold, fontSize: 11, color: staticColors.success }}>
+                    Your new API key — copy it now.
+                  </Text>
+                  <Text style={{
+                    fontFamily: theme.fonts.regular,
+                    fontSize: 12,
+                    color: staticColors.textPrimary,
+                  }} selectable>
+                    {revealedNewKey}
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity
+                      onPress={() => handleCopyKey(revealedNewKey, '__new__')}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 8,
+                        alignItems: 'center',
+                        backgroundColor: copiedKeyId === '__new__' ? staticColors.success : colors.primary,
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={{ fontFamily: theme.fonts.semibold, fontSize: 12, color: staticColors.bg }}>
+                        {copiedKeyId === '__new__' ? 'Copied!' : 'Copy'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setRevealedNewKey(null)}
+                      style={{
+                        paddingVertical: 8,
+                        paddingHorizontal: 14,
+                        borderWidth: 1,
+                        borderColor: staticColors.border,
+                        alignItems: 'center',
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={{ fontFamily: theme.fonts.regular, fontSize: 12, color: staticColors.textMuted }}>
+                        Dismiss
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {/* Keys list */}
+              {apiKeysLoading ? (
+                <ActivityIndicator size="small" color={staticColors.textMuted} />
+              ) : apiKeys.length === 0 ? (
+                <View style={{
+                  paddingVertical: 16,
+                  borderWidth: 1,
+                  borderColor: staticColors.border,
+                  alignItems: 'center',
+                }}>
+                  <Text style={{ fontFamily: theme.fonts.regular, fontSize: 12, color: staticColors.textMuted }}>
+                    No API keys yet. Generate one above.
+                  </Text>
+                </View>
+              ) : (
+                <View style={{ borderWidth: 1, borderColor: staticColors.border }}>
+                  {apiKeys.map((key, i) => (
+                    <View key={key.id} style={{
+                      padding: 12,
+                      borderBottomWidth: i < apiKeys.length - 1 ? 1 : 0,
+                      borderBottomColor: staticColors.border,
+                    }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <View style={{ flex: 1, marginRight: 12 }}>
+                          <Text style={{ fontFamily: theme.fonts.medium, fontSize: 13, color: staticColors.textPrimary }}>
+                            {key.name}
+                          </Text>
+                          <Text style={{ fontFamily: theme.fonts.regular, fontSize: 11, color: staticColors.textMuted, marginTop: 2 }}>
+                            {formatKeyDate(key.created_at)} · {formatKeyLastUsed(key.last_used_at)}
+                          </Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', gap: 6 }}>
+                          {key.key_raw && (
+                            <TouchableOpacity
+                              onPress={() => setRevealedKeyId(revealedKeyId === key.id ? null : key.id)}
+                              style={{
+                                paddingVertical: 6,
+                                paddingHorizontal: 10,
+                                borderWidth: 1,
+                                borderColor: staticColors.border,
+                              }}
+                              activeOpacity={0.7}
+                            >
+                              {revealedKeyId === key.id ? (
+                                <EyeOff size={14} color={staticColors.textMuted} />
+                              ) : (
+                                <Eye size={14} color={staticColors.textMuted} />
+                              )}
+                            </TouchableOpacity>
+                          )}
+                          <TouchableOpacity
+                            onPress={() => handleRevokeKey(key.id)}
+                            style={{
+                              paddingVertical: 6,
+                              paddingHorizontal: 10,
+                              borderWidth: 1,
+                              borderColor: staticColors.danger,
+                            }}
+                            activeOpacity={0.7}
+                          >
+                            <X size={14} color={staticColors.danger} />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                      {revealedKeyId === key.id && key.key_raw && (
+                        <View style={{ marginTop: 8, gap: 8 }}>
+                          <Text style={{
+                            fontFamily: theme.fonts.regular,
+                            fontSize: 12,
+                            color: staticColors.textPrimary,
+                            backgroundColor: staticColors.bg,
+                            borderWidth: 1,
+                            borderColor: staticColors.border,
+                            padding: 8,
+                          }} selectable>
+                            {key.key_raw}
+                          </Text>
+                          <TouchableOpacity
+                            onPress={() => handleCopyKey(key.key_raw!, key.id)}
+                            style={{
+                              paddingVertical: 8,
+                              alignItems: 'center',
+                              backgroundColor: copiedKeyId === key.id ? staticColors.success : colors.primary,
+                            }}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={{ fontFamily: theme.fonts.semibold, fontSize: 12, color: staticColors.bg }}>
+                              {copiedKeyId === key.id ? 'Copied!' : 'Copy Key'}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Divider between API keys and OpenAI settings */}
+              <View style={{ height: 1, backgroundColor: staticColors.border, marginVertical: 24 }} />
+
+              <Text style={styles.sectionLabel}>CUSTOM AI</Text>
               <View style={styles.card}>
                 {/* OpenAI API Key */}
                 <View style={styles.inputRow}>
@@ -1639,7 +1997,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000000',
+    backgroundColor: staticColors.bg,
   },
   drawer: {
     position: 'absolute',
@@ -1668,7 +2026,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: theme.fonts.semibold,
-    fontSize: 15,
+    fontSize: 14,
     color: staticColors.textPrimary,
     letterSpacing: 1,
   },
@@ -1723,7 +2081,7 @@ const styles = StyleSheet.create({
   },
   previewTitle: {
     fontFamily: theme.fonts.medium,
-    fontSize: 15,
+    fontSize: 14,
   },
   previewText: {
     fontFamily: theme.fonts.regular,
@@ -1737,7 +2095,7 @@ const styles = StyleSheet.create({
   previewTag: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 4,
+    borderRadius: 2,
     borderWidth: 1,
   },
   previewTagText: {
@@ -1759,7 +2117,7 @@ const styles = StyleSheet.create({
   menuItemText: {
     flex: 1,
     fontFamily: theme.fonts.medium,
-    fontSize: 15,
+    fontSize: 14,
     color: staticColors.textPrimary,
   },
   divider: {
@@ -1789,7 +2147,7 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontFamily: theme.fonts.medium,
-    fontSize: 15,
+    fontSize: 14,
     color: staticColors.textPrimary,
     marginBottom: 2,
   },
@@ -1986,7 +2344,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: staticColors.border,
-    borderRadius: 6,
+    borderRadius: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2000,14 +2358,16 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 6,
+    borderRadius: 2,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 1,
   },
   saveButtonText: {
     fontFamily: theme.fonts.semibold,
     fontSize: 11,
-    color: staticColors.bg,
+    color: staticColors.primary,
     letterSpacing: 1,
   },
 });

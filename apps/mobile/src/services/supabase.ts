@@ -1,7 +1,10 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 import * as Keychain from 'react-native-keychain';
+import { NativeModules, Platform } from 'react-native';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@env';
+
+const { WatchSessionBridge } = NativeModules;
 
 const supabaseUrl = SUPABASE_URL;
 const supabaseAnonKey = SUPABASE_ANON_KEY;
@@ -23,6 +26,12 @@ const KeychainAdapter = {
   setItem: async (key: string, value: string): Promise<void> => {
     try {
       await Keychain.setGenericPassword('slate-auth', value, { service: key });
+      // Sync auth token to watchOS companion via shared Keychain + WatchConnectivity
+      if (Platform.OS === 'ios' && WatchSessionBridge && key.includes('auth-token')) {
+        WatchSessionBridge.syncToken(value).catch(() => {
+          // Non-critical: watch sync failure shouldn't block auth
+        });
+      }
     } catch (error) {
       console.error('Keychain setItem error:', error);
     }
@@ -30,6 +39,10 @@ const KeychainAdapter = {
   removeItem: async (key: string): Promise<void> => {
     try {
       await Keychain.resetGenericPassword({ service: key });
+      // Clear watch token on sign out
+      if (Platform.OS === 'ios' && WatchSessionBridge && key.includes('auth-token')) {
+        WatchSessionBridge.clearToken().catch(() => {});
+      }
     } catch (error) {
       console.error('Keychain removeItem error:', error);
     }

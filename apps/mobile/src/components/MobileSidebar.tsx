@@ -58,11 +58,11 @@ export default function MobileSidebar({
   useEffect(() => {
     if (isOpen) {
       setExpandedPages(new Set()); // Collapse all pages on open
-      translateX.value = withTiming(0, { duration: 300 });
-      overlayOpacity.value = withTiming(0.5, { duration: 300 });
+      translateX.value = withTiming(0, { duration: 250 });
+      overlayOpacity.value = withTiming(0.72, { duration: 250 });
     } else {
-      translateX.value = withTiming(-SCREEN_WIDTH, { duration: 300 });
-      overlayOpacity.value = withTiming(0, { duration: 300 });
+      translateX.value = withTiming(-SCREEN_WIDTH, { duration: 250 });
+      overlayOpacity.value = withTiming(0, { duration: 250 });
     }
   }, [isOpen, translateX, overlayOpacity]);
 
@@ -73,19 +73,19 @@ export default function MobileSidebar({
         overlayOpacity.value = interpolate(
           translateX.value,
           [-SCREEN_WIDTH, 0],
-          [0, 0.5],
+          [0, 0.72],
           Extrapolation.CLAMP
         );
       }
     })
     .onEnd((event) => {
       if (event.translationX < -SWIPE_THRESHOLD * 2 || event.velocityX < -500) {
-        translateX.value = withTiming(-SCREEN_WIDTH, { duration: 300 });
-        overlayOpacity.value = withTiming(0, { duration: 300 });
+        translateX.value = withTiming(-SCREEN_WIDTH, { duration: 250 });
+        overlayOpacity.value = withTiming(0, { duration: 250 });
         runOnJS(onClose)();
       } else {
-        translateX.value = withTiming(0, { duration: 300 });
-        overlayOpacity.value = withTiming(0.5, { duration: 300 });
+        translateX.value = withTiming(0, { duration: 250 });
+        overlayOpacity.value = withTiming(0.72, { duration: 250 });
       }
     });
 
@@ -146,7 +146,7 @@ export default function MobileSidebar({
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.logo, { color: '#ffffff' }]}>SLATE</Text>
+            <Text style={[styles.logo, { color: staticColors.textPrimary }]}>SLATE</Text>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={onClose}
@@ -420,7 +420,7 @@ export default function MobileSidebar({
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000000',
+    backgroundColor: staticColors.bg,
   },
   sidebar: {
     position: 'absolute',
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 16,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   section: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     marginBottom: 24,
   },
   sectionLabel: {
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
   newBadge: {
     paddingVertical: 2,
     paddingHorizontal: 6,
-    borderRadius: 4,
+    borderRadius: 2,
   },
   newBadgeText: {
     fontFamily: theme.fonts.semibold,
@@ -495,14 +495,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     gap: 12,
-    borderRadius: 8,
+    borderRadius: 0,
   },
   pageItemActive: {
     backgroundColor: staticColors.surface,
   },
   pageName: {
     fontFamily: theme.fonts.regular,
-    fontSize: 16,
+    fontSize: 14,
     color: staticColors.textPrimary,
     flex: 1,
   },
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
   sectionItem: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 6,
+    borderRadius: 0,
   },
   sectionItemActive: {
     backgroundColor: staticColors.surface,
@@ -537,19 +537,19 @@ const styles = StyleSheet.create({
   tagPill: {
     borderWidth: 1,
     borderColor: staticColors.border,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 0,
   },
   tagPillText: {
     fontFamily: theme.fonts.regular,
-    fontSize: 12,
+    fontSize: 11,
     color: staticColors.textMuted,
   },
   footer: {
     borderTopWidth: 1,
     borderTopColor: staticColors.border,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 16,
   },
   settingsButton: {
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
   },
   userEmail: {
     fontFamily: theme.fonts.regular,
-    fontSize: 12,
+    fontSize: 11,
     color: staticColors.textMuted,
     marginTop: 2,
   },
