@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { Page, PageWithSections, Section, Note, PermissionRole } from '@slate/shared';
+import type { Page, PageWithSections, Section, Note, PermissionRole, CustomView } from '@slate/shared';
 import { supabase } from '../services/supabase';
 import { useAuthStore } from './authStore';
 import { acceptPageShare as acceptPageShareService, declinePageShare as declinePageShareService } from '../services/permissions';
@@ -22,6 +22,7 @@ interface DataState {
   sharedPages: SharedPage[];
   notes: Note[];
   tags: string[];
+  customViews: CustomView[];
   userProfiles: Record<string, UserProfile>;
   loading: boolean;
   error: string | null;
@@ -30,6 +31,11 @@ interface DataState {
   // Actions
   fetchData: () => Promise<void>;
   refreshData: () => Promise<void>;
+
+  // Custom view actions
+  fetchCustomViews: () => Promise<void>;
+  addCustomView: (view: Omit<CustomView, 'id' | 'created_at'>) => Promise<CustomView | null>;
+  removeCustomView: (id: string) => Promise<void>;
 
   // Page actions
   addPage: (page: PageWithSections) => void;
@@ -63,6 +69,7 @@ export const useDataStore = create<DataState>()(
       sharedPages: [],
       notes: [],
       tags: [],
+      customViews: [],
       userProfiles: {},
       loading: false,
       error: null,
@@ -325,6 +332,9 @@ export const useDataStore = create<DataState>()(
             lastFetched: Date.now(),
           });
 
+          // Fetch custom views after main data
+          get().fetchCustomViews();
+
         } catch (error) {
           console.error('Fetch data error:', error);
           set({
@@ -502,6 +512,62 @@ export const useDataStore = create<DataState>()(
         }
       },
 
+      // Custom view actions
+      fetchCustomViews: async () => {
+        const { user } = useAuthStore.getState();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('custom_views')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('position', { ascending: true });
+
+        if (error) {
+          console.error('Fetch custom views error:', error);
+          return;
+        }
+
+        set({ customViews: data || [] });
+      },
+
+      addCustomView: async (view) => {
+        const { data, error } = await supabase
+          .from('custom_views')
+          .insert(view)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Add custom view error:', error);
+          return null;
+        }
+
+        set((state) => ({
+          customViews: [...state.customViews, data],
+        }));
+        return data;
+      },
+
+      removeCustomView: async (id) => {
+        const prev = get().customViews;
+
+        // Optimistic removal
+        set((state) => ({
+          customViews: state.customViews.filter((v) => v.id !== id),
+        }));
+
+        const { error } = await supabase
+          .from('custom_views')
+          .delete()
+          .eq('id', id);
+
+        if (error) {
+          console.error('Remove custom view error:', error);
+          set({ customViews: prev });
+        }
+      },
+
       // Utilities
       getNotesForSection: (sectionId) => {
         return get().notes.filter((n) => n.section_id === sectionId);
@@ -519,6 +585,7 @@ export const useDataStore = create<DataState>()(
         sharedPages: state.sharedPages,
         notes: state.notes,
         tags: state.tags,
+        customViews: state.customViews,
         lastFetched: state.lastFetched,
       }),
     }

@@ -16,9 +16,15 @@ export interface FrontendAction {
   completed?: boolean;
   search?: string;
   title?: string;
-  view_type?: 'list' | 'boxes' | 'calendar';
-  filter?: Record<string, unknown>;
-  group_by?: 'section' | 'page' | 'tag' | 'month' | 'week' | 'day' | 'completed';
+  view_type?: 'list' | 'boxes';
+  groups?: Array<{
+    name: string;
+    filter: {
+      tags?: string[];
+      completed?: boolean;
+      search?: string;
+    };
+  }>;
 }
 
 export interface AgentResponse {

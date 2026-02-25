@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, FlatList, StyleSheet, BackHandler, RefreshControl, Text, Vibration, Dimensions, Alert, LayoutAnimation, ScrollView, TouchableOpacity } from 'react-native';
+import { View, FlatList, SectionList, StyleSheet, BackHandler, RefreshControl, Text, Pressable, Vibration, Dimensions, Alert, LayoutAnimation, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, type RouteProp } from '@react-navigation/native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -17,7 +17,8 @@ import { useChatState } from '../hooks/useChatState';
 import { apiClient } from '../services/api';
 import { colors as staticColors, theme } from '../styles';
 import { useTheme } from '../contexts/ThemeContext';
-import type { Note, AgentResponse, FrontendAction, PlanAction } from '@slate/shared';
+import type { Note, AgentResponse, FrontendAction, PlanAction, CustomViewGroup } from '@slate/shared';
+import { Layers } from 'lucide-react-native';
 import { supabase } from '../services/supabase';
 import type { PlanGroupStatus } from '../hooks/useChatState';
 
@@ -28,7 +29,7 @@ const EDGE_WIDTH = 20;
 export default function MainScreen() {
   const insets = useSafeAreaInsets();
   const route = useRoute<RouteProp<RootStackParamList, 'Main'>>();
-  const { pages, sharedPages, notes: allNotes, userProfiles, loading, fetchData, refreshData, getNotesForSection, moveNote, updateNote, removeNote, updatePage, acceptSharedPage, declineSharedPage } = useDataStore();
+  const { pages, sharedPages, notes: allNotes, userProfiles, customViews, loading, fetchData, refreshData, getNotesForSection, moveNote, updateNote, removeNote, updatePage, acceptSharedPage, declineSharedPage, addCustomView, removeCustomView } = useDataStore();
   const { user } = useAuthStore();
   const { settings } = useSettingsStore();
   const chatState = useChatState();
@@ -73,6 +74,10 @@ export default function MainScreen() {
     (settings.note_sort_order as SortMode) || 'created_desc'
   );
   const [customSortOrder, setCustomSortOrder] = useState<string[] | null>(null);
+
+  // Custom view state
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
+  const [showViewDropdown, setShowViewDropdown] = useState(false);
 
   // Default page — apply once on first data load
   const hasAppliedDefault = useRef(false);
@@ -236,9 +241,34 @@ export default function MainScreen() {
           }
           break;
         }
+        case 'create_custom_view': {
+          if (!action.title || !action.groups?.length) break;
+          const targetPage = action.page_name
+            ? pages.find(p => p.name === action.page_name)
+            : currentPage;
+          const pageId = targetPage?.id || null;
+          let sectionId: string | null = null;
+          if (action.section_name && targetPage) {
+            const sec = targetPage.sections.find(s => s.name === action.section_name);
+            sectionId = sec?.id || null;
+          }
+          if (!user) break;
+          addCustomView({
+            user_id: user.id,
+            title: action.title,
+            view_type: action.view_type || 'list',
+            page_id: pageId,
+            section_id: sectionId,
+            groups: action.groups,
+            position: 0,
+          }).then((created) => {
+            if (created) setActiveViewId(created.id);
+          });
+          break;
+        }
       }
     }
-  }, [pages]);
+  }, [pages, currentPage, user, addCustomView]);
 
   // Process a single message through the agent API
   const processMessage = useCallback(async (
@@ -931,6 +961,34 @@ export default function MainScreen() {
 
   const notes = getNotes();
 
+  // Group notes for active custom view
+  const activeView = activeViewId ? customViews.find(v => v.id === activeViewId) : null;
+
+  const groupNotesForView = useCallback((noteList: Note[], groups: CustomViewGroup[]): { title: string; data: Note[] }[] => {
+    const sections: { title: string; data: Note[] }[] = [];
+    const used = new Set<string>();
+
+    for (const group of groups) {
+      const matching = noteList.filter(n => {
+        if (used.has(n.id)) return false;
+        if (group.filter.tags?.length && !group.filter.tags.every(t => n.tags?.includes(t))) return false;
+        if (group.filter.completed !== undefined && n.completed !== group.filter.completed) return false;
+        if (group.filter.search && !n.content.toLowerCase().includes(group.filter.search.toLowerCase())) return false;
+        return true;
+      });
+      matching.forEach(n => used.add(n.id));
+      sections.push({ title: `${group.name} (${matching.length})`, data: matching });
+    }
+
+    const other = noteList.filter(n => !used.has(n.id));
+    if (other.length > 0) {
+      sections.push({ title: `Other (${other.length})`, data: other });
+    }
+    return sections;
+  }, []);
+
+  const groupedSections = activeView ? groupNotesForView(notes, activeView.groups) : null;
+
   const renderNote = useCallback(
     ({ item: note }: { item: Note }) => (
       <NoteCard
@@ -1085,27 +1143,137 @@ export default function MainScreen() {
                     </Text>
                   </TouchableOpacity>
                 )}
+                {activeViewId && (() => {
+                  const activeView = customViews.find(v => v.id === activeViewId);
+                  return activeView ? (
+                    <TouchableOpacity
+                      style={[styles.sortChip, { borderColor: colors.primary }]}
+                      onPress={() => setActiveViewId(null)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.sortChipText, { color: colors.primary }]}>
+                        VIEW: {activeView.title} ✕
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null;
+                })()}
+                {customViews.some(v =>
+                  v.page_id === currentPageId &&
+                  (v.section_id === null || v.section_id === currentSectionId)
+                ) && (
+                  <TouchableOpacity
+                    style={[styles.sortChip, showViewDropdown && { borderColor: colors.primary }]}
+                    onPress={() => setShowViewDropdown(!showViewDropdown)}
+                    activeOpacity={0.7}
+                  >
+                    <Layers size={14} color={showViewDropdown ? colors.primary : staticColors.textMuted} />
+                  </TouchableOpacity>
+                )}
               </ScrollView>
 
-              <FlatList
-                data={notes}
-                keyExtractor={(note) => note.id}
-                renderItem={renderNote}
-                ListEmptyComponent={renderEmpty}
-                contentContainerStyle={[
-                  notes.length === 0 ? styles.emptyList : styles.notesList,
-                  { paddingBottom: 180 + insets.bottom },
-                ]}
-                refreshControl={
-                  <RefreshControl
-                    refreshing={loading}
-                    onRefresh={refreshData}
-                    tintColor={staticColors.textMuted}
+              {/* Custom view dropdown */}
+              {showViewDropdown && (
+                <>
+                  <Pressable
+                    style={styles.viewDropdownBackdrop}
+                    onPress={() => setShowViewDropdown(false)}
                   />
-                }
-                showsVerticalScrollIndicator={false}
-                keyboardDismissMode="on-drag"
-              />
+                  <View style={[styles.viewDropdown, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    {customViews
+                      .filter(v =>
+                        v.page_id === currentPageId &&
+                        (v.section_id === null || v.section_id === currentSectionId)
+                      )
+                      .map((view) => (
+                        <View key={view.id} style={styles.viewDropdownRow}>
+                          <TouchableOpacity
+                            style={{ flex: 1, paddingVertical: 10 }}
+                            onPress={() => {
+                              setActiveViewId(view.id);
+                              setShowViewDropdown(false);
+                            }}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={[styles.viewDropdownText, { color: colors.textPrimary }]}>
+                              {view.title}
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => {
+                              Alert.alert(
+                                'Delete View',
+                                `Delete "${view.title}"?`,
+                                [
+                                  { text: 'Cancel', style: 'cancel' },
+                                  {
+                                    text: 'Delete',
+                                    style: 'destructive',
+                                    onPress: () => {
+                                      if (activeViewId === view.id) setActiveViewId(null);
+                                      removeCustomView(view.id);
+                                    },
+                                  },
+                                ],
+                              );
+                            }}
+                            activeOpacity={0.7}
+                            style={{ padding: 10 }}
+                          >
+                            <Text style={{ color: staticColors.textMuted, fontSize: 14 }}>✕</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                  </View>
+                </>
+              )}
+
+              {groupedSections ? (
+                <SectionList
+                  sections={groupedSections}
+                  keyExtractor={(note) => note.id}
+                  renderItem={renderNote}
+                  renderSectionHeader={({ section: { title } }) => (
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionHeaderText}>{title}</Text>
+                    </View>
+                  )}
+                  ListEmptyComponent={renderEmpty}
+                  contentContainerStyle={[
+                    notes.length === 0 ? styles.emptyList : styles.notesList,
+                    { paddingBottom: 180 + insets.bottom },
+                  ]}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={loading}
+                      onRefresh={refreshData}
+                      tintColor={staticColors.textMuted}
+                    />
+                  }
+                  showsVerticalScrollIndicator={false}
+                  keyboardDismissMode="on-drag"
+                  stickySectionHeadersEnabled={false}
+                />
+              ) : (
+                <FlatList
+                  data={notes}
+                  keyExtractor={(note) => note.id}
+                  renderItem={renderNote}
+                  ListEmptyComponent={renderEmpty}
+                  contentContainerStyle={[
+                    notes.length === 0 ? styles.emptyList : styles.notesList,
+                    { paddingBottom: 180 + insets.bottom },
+                  ]}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={loading}
+                      onRefresh={refreshData}
+                      tintColor={staticColors.textMuted}
+                    />
+                  }
+                  showsVerticalScrollIndicator={false}
+                  keyboardDismissMode="on-drag"
+                />
+              )}
             </View>
           </GestureDetector>
         )}
@@ -1233,5 +1401,50 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: staticColors.textMuted,
     letterSpacing: 0.5,
+  },
+  sectionHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 6,
+  },
+  sectionHeaderText: {
+    fontFamily: theme.fonts.semibold,
+    fontSize: 13,
+    color: staticColors.textSecondary,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  viewDropdownBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 50,
+  },
+  viewDropdown: {
+    position: 'absolute',
+    top: 46,
+    right: 16,
+    minWidth: 200,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    zIndex: 51,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  viewDropdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  viewDropdownText: {
+    fontFamily: theme.fonts.medium,
+    fontSize: 14,
   },
 });

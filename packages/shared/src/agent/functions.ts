@@ -463,29 +463,36 @@ export const FUNCTION_DEFINITIONS = [
     type: 'function' as const,
     function: {
       name: 'create_custom_view',
-      description: 'Create a filtered view with custom grouping.',
+      description: 'Create a persistent grouped view that organizes notes by declarative filter rules. Each group defines a name and filter criteria. Notes matching a group\'s filters appear under that group header. Scoped to a page or section.',
       parameters: {
         type: 'object',
         properties: {
-          title: { type: 'string', description: 'View title' },
-          view_type: { type: 'string', enum: ['list', 'boxes', 'calendar'], description: 'View layout' },
-          filter: {
-            type: 'object',
-            properties: {
-              tags: { type: 'array', items: { type: 'string' } },
-              completed: { type: 'boolean' },
-              search: { type: 'string' },
-              page_name: { type: 'string' },
-              section_name: { type: 'string' },
+          title: { type: 'string', description: 'View title displayed in the UI' },
+          view_type: { type: 'string', enum: ['list', 'boxes'], description: 'View layout' },
+          page_name: { type: 'string', description: 'Page to scope this view to' },
+          section_name: { type: 'string', description: 'Section within the page to scope this view to' },
+          groups: {
+            type: 'array',
+            description: 'Groups that notes are sorted into. Each group has a display name and filter rules. A note goes into the first matching group.',
+            minItems: 2,
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string', description: 'Display name for this group' },
+                filter: {
+                  type: 'object',
+                  properties: {
+                    tags: { type: 'array', items: { type: 'string' }, description: 'Note must have ALL of these tags' },
+                    completed: { type: 'boolean', description: 'Filter by completion status' },
+                    search: { type: 'string', description: 'Case-insensitive content substring match' },
+                  },
+                },
+              },
+              required: ['name', 'filter'],
             },
           },
-          group_by: {
-            type: 'string',
-            enum: ['section', 'page', 'tag', 'month', 'week', 'day', 'completed'],
-            description: 'How to group results',
-          },
         },
-        required: ['title', 'view_type', 'filter'],
+        required: ['title', 'view_type', 'groups'],
       },
     },
   },
