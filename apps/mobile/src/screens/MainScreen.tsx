@@ -1,7 +1,9 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, FlatList, StyleSheet, BackHandler, RefreshControl, Text, Vibration, Dimensions, Alert, LayoutAnimation, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRoute, type RouteProp } from '@react-navigation/native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import type { RootStackParamList } from '../navigation/types';
 import { useSharedValue, runOnJS } from 'react-native-reanimated';
 import { MobileHeader, MobileSidebar, NoteCard, ChatPanel, MoveOverlay, SettingsDrawer, PageContextMenu, ShareSheet, SharedPageBanner, HomeView } from '../components';
 import type { DropTarget } from '../components';
@@ -25,6 +27,7 @@ const EDGE_WIDTH = 20;
 
 export default function MainScreen() {
   const insets = useSafeAreaInsets();
+  const route = useRoute<RouteProp<RootStackParamList, 'Main'>>();
   const { pages, sharedPages, notes: allNotes, userProfiles, loading, fetchData, refreshData, getNotesForSection, moveNote, updateNote, removeNote, updatePage, acceptSharedPage, declineSharedPage } = useDataStore();
   const { user } = useAuthStore();
   const { settings } = useSettingsStore();
@@ -118,22 +121,18 @@ export default function MainScreen() {
     fetchData();
   }, []);
 
-  // Show welcome dialog when demo completes and no API key is set
-  const demoWasActive = useRef(!settings.demo_complete);
-  useEffect(() => {
-    if (demoWasActive.current && settings.demo_complete) {
-      demoWasActive.current = false;
-      if (!settings.custom_openai_key) {
-        setTimeout(() => {
-          Alert.alert(
-            'Welcome to Slate',
-            'To get started, enter your OpenAI API key in the chat box below.',
-            [{ text: 'OK' }],
-          );
-        }, 500);
-      }
+  // Show welcome dialog when demo completes (called directly from ChatPanel)
+  const handleDemoComplete = useCallback(() => {
+    if (!settings.custom_openai_key) {
+      setTimeout(() => {
+        Alert.alert(
+          'Welcome to Slate',
+          'To get started, enter your OpenAI API key in the chat box below.',
+          [{ text: 'OK' }],
+        );
+      }, 500);
     }
-  }, [settings.demo_complete, settings.custom_openai_key]);
+  }, [settings.custom_openai_key]);
 
   // Apply default page on first data load
   useEffect(() => {
@@ -387,6 +386,14 @@ export default function MainScreen() {
     chatState.compactHistory();
   }, [chatState, processMessage, processQueue]);
 
+  // Handle voice message from VoiceInputScreen
+  useEffect(() => {
+    const voiceMessage = route.params?.voiceMessage;
+    if (voiceMessage) {
+      handleChatMessage(voiceMessage);
+    }
+  }, [route.params?.voiceMessage, handleChatMessage]);
+
   // Handle user responses to clarifications/confirmations
   const handleUserResponse = useCallback(async (
     response: string,
@@ -499,23 +506,28 @@ export default function MainScreen() {
 
   const handleDemoCleanupData = useCallback(async () => {
     const { pageId, noteId, sectionId } = demoDataRef.current;
+    console.log('[DEMO CLEANUP] ids:', { pageId, noteId, sectionId });
     try {
-      if (noteId) await supabase.from('notes').delete().eq('id', noteId);
-      if (sectionId) await supabase.from('sections').delete().eq('id', sectionId);
-      if (pageId) await supabase.from('pages').delete().eq('id', pageId);
+      if (noteId) {
+        const { error: noteErr } = await supabase.from('notes').delete().eq('id', noteId);
+        console.log('[DEMO CLEANUP] note delete:', noteErr ? noteErr.message : 'ok');
+      }
+      if (sectionId) {
+        const { error: secErr } = await supabase.from('sections').delete().eq('id', sectionId);
+        console.log('[DEMO CLEANUP] section delete:', secErr ? secErr.message : 'ok');
+      }
+      if (pageId) {
+        const { error: pageErr } = await supabase.from('pages').delete().eq('id', pageId);
+        console.log('[DEMO CLEANUP] page delete:', pageErr ? pageErr.message : 'ok');
+      }
       demoDataRef.current = {};
       await refreshData();
-      // Navigate back to first page or null
-      if (pages.length > 0) {
-        const firstNonDemo = pages.find(p => p.id !== pageId);
-        setCurrentPageId(firstNonDemo?.id || null);
-      } else {
-        setCurrentPageId(null);
-      }
+      setCurrentPageId(null);
+      setCurrentSectionId(null);
     } catch (e) {
       console.error('Demo data cleanup failed:', e);
     }
-  }, [pages, refreshData]);
+  }, [refreshData]);
 
   const executePlanGroup = useCallback(async (
     actions: PlanAction[],
@@ -1120,6 +1132,7 @@ export default function MainScreen() {
           onPlanCancel={handlePlanCancel}
           onDemoCreateData={handleDemoCreateData}
           onDemoCleanupData={handleDemoCleanupData}
+          onDemoComplete={handleDemoComplete}
         />
 
         {/* Sidebar overlay */}

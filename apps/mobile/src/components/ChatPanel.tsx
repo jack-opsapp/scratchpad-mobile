@@ -28,15 +28,10 @@ import Animated, {
   runOnJS,
   Easing,
   interpolate,
-  useFrameCallback,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { BlurView } from '@react-native-community/blur';
-import Voice, {
-  SpeechResultsEvent,
-  SpeechErrorEvent,
-  SpeechVolumeChangeEvent,
-} from '@react-native-voice/voice';
+import { useVoiceInput } from '../hooks/useVoiceInput';
 import { Send, Mic, Square, ChevronDown, ChevronUp, ChevronRight, Check, X, FileText, FolderPlus, StickyNote, Trash2 } from 'lucide-react-native';
 import { colors as staticColors, theme } from '../styles';
 import { useTheme } from '../contexts/ThemeContext';
@@ -67,7 +62,6 @@ const WAVEFORM_BAR_COUNT = 24;
 const WAVEFORM_BAR_WIDTH = 3;
 const WAVEFORM_BAR_GAP = 2;
 const WAVEFORM_HEIGHT = 32;
-const EXPANSION_DURATION = 350;
 
 // WaveformBar: memoized individual bar driven by real audio volume + time for variation
 const WaveformBar = memo(({
@@ -358,6 +352,7 @@ interface ChatPanelProps {
   onPlanCancel?: (messageIndex: number) => void;
   onDemoCreateData?: () => Promise<void>;
   onDemoCleanupData?: () => Promise<void>;
+  onDemoComplete?: () => void;
 }
 
 export default function ChatPanel({
@@ -373,6 +368,7 @@ export default function ChatPanel({
   onPlanCancel,
   onDemoCreateData,
   onDemoCleanupData,
+  onDemoComplete,
 }: ChatPanelProps) {
   const insets = useSafeAreaInsets();
   const colors = useTheme();
@@ -388,21 +384,27 @@ export default function ChatPanel({
   const [height, setHeight] = useState(HEIGHTS.inputOnly);
   const [inputValue, setInputValue] = useState('');
   const [apiKeyInput, setApiKeyInput] = useState('');
-  const [isListening, setIsListening] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const listRef = useRef<FlatList>(null);
   const historyIndexRef = useRef(-1);
   const savedInputRef = useRef('');
+
+  const {
+    isListening,
+    volumeLevel,
+    waveformTime,
+    recordingExpansion,
+    startRecording,
+    stopRecording,
+  } = useVoiceInput({
+    onTranscriptChange: (text) => setInputValue(text),
+  });
 
   const panelHeight = useSharedValue(HEIGHTS.inputOnly);
   const dragStartHeightSV = useSharedValue(HEIGHTS.inputOnly);
   const isDraggingSV = useSharedValue(false);
   const micPulse = useSharedValue(1);
 
-  // Waveform recording state
-  const recordingExpansion = useSharedValue(0);
-  const waveformTime = useSharedValue(0);
-  const volumeLevel = useSharedValue(0);
   const inputAreaWidthSV = useSharedValue(300);
 
   // ====== Demo state ======
@@ -525,12 +527,14 @@ export default function ChatPanel({
       demoCollapsedRef.current = false;
       if (onDemoCleanupData) await onDemoCleanupData();
       setDemoFinished(true);
+      setHeight(HEIGHTS.inputOnly);
       updateSettings({ demo_complete: true });
+      onDemoComplete?.();
     } else {
       setDemoStep(prev => prev + 1);
       setTypedText('');
     }
-  }, [waitingForUserSend, sendGlow, demoStep, onDemoCleanupData, updateSettings]);
+  }, [waitingForUserSend, sendGlow, demoStep, onDemoCleanupData, onDemoComplete, updateSettings]);
 
   // Cursor blink animation
   useEffect(() => {
@@ -587,89 +591,35 @@ export default function ChatPanel({
     setDemoFinished(true);
     setInputValue('');
     sendGlow.value = 0;
+    setHeight(HEIGHTS.inputOnly);
     onDemoCleanupData?.();
     updateSettings({ demo_complete: true });
-  }, [updateSettings, onDemoCleanupData, sendGlow]);
+    onDemoComplete?.();
+  }, [updateSettings, onDemoCleanupData, onDemoComplete, sendGlow]);
 
-  // Waveform time driver: increments on each frame while recording
-  const waveformFrameCallback = useFrameCallback((frameInfo) => {
-    if (recordingExpansion.value > 0.5) {
-      waveformTime.value += (frameInfo.timeSincePreviousFrame ?? 16) / 1000;
-    }
-  }, false); // starts inactive
-
-  // Contract recording overlay
-  const contractOverlay = useCallback(() => {
-    waveformFrameCallback.setActive(false);
-    volumeLevel.value = withTiming(0, { duration: 150 });
-    recordingExpansion.value = withTiming(0, {
-      duration: EXPANSION_DURATION,
-      easing: Easing.inOut(Easing.ease),
-    });
-  }, [recordingExpansion, volumeLevel, waveformFrameCallback]);
-
-  // Voice recognition setup
+  // Reset micPulse when voice input stops (e.g. from onSpeechEnd/onSpeechError in the hook)
   useEffect(() => {
-    Voice.onSpeechResults = (e: SpeechResultsEvent) => {
-      if (e.value && e.value.length > 0) {
-        setInputValue(e.value[0]);
-      }
-    };
-
-    Voice.onSpeechVolumeChanged = (e: SpeechVolumeChangeEvent) => {
-      // Smoothly animate to new volume level
-      volumeLevel.value = withTiming(Math.max(0, e.value ?? 0), { duration: 100 });
-    };
-
-    Voice.onSpeechError = (_e: SpeechErrorEvent) => {
-      setIsListening(false);
+    if (!isListening) {
       micPulse.value = 1;
-      contractOverlay();
-    };
-
-    Voice.onSpeechEnd = () => {
-      setIsListening(false);
-      micPulse.value = 1;
-      contractOverlay();
-    };
-
-    return () => {
-      Voice.destroy().then(Voice.removeAllListeners);
-    };
-  }, [micPulse, volumeLevel, contractOverlay]);
+    }
+  }, [isListening, micPulse]);
 
   const handleMicPress = useCallback(async () => {
     if (isListening) {
-      await Voice.stop();
-      setIsListening(false);
       micPulse.value = 1;
-      contractOverlay();
+      await stopRecording();
     } else {
-      try {
-        setIsListening(true);
-        micPulse.value = withRepeat(
-          withSequence(
-            withTiming(1.3, { duration: 600 }),
-            withTiming(1, { duration: 600 }),
-          ),
-          -1,
-          true,
-        );
-        // Expand overlay and start waveform
-        waveformTime.value = 0;
-        recordingExpansion.value = withTiming(1, {
-          duration: EXPANSION_DURATION,
-          easing: Easing.out(Easing.ease),
-        });
-        waveformFrameCallback.setActive(true);
-        await Voice.start('en-US');
-      } catch (_e) {
-        setIsListening(false);
-        micPulse.value = 1;
-        contractOverlay();
-      }
+      micPulse.value = withRepeat(
+        withSequence(
+          withTiming(1.3, { duration: 600 }),
+          withTiming(1, { duration: 600 }),
+        ),
+        -1,
+        true,
+      );
+      await startRecording();
     }
-  }, [isListening, micPulse, recordingExpansion, waveformTime, waveformFrameCallback, contractOverlay]);
+  }, [isListening, micPulse, stopRecording, startRecording]);
 
   const micAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: micPulse.value }],
@@ -692,12 +642,10 @@ export default function ChatPanel({
 
   const handleStopRecording = useCallback(async () => {
     if (isListening) {
-      await Voice.stop();
-      setIsListening(false);
       micPulse.value = 1;
-      contractOverlay();
+      await stopRecording();
     }
-  }, [isListening, micPulse, contractOverlay]);
+  }, [isListening, micPulse, stopRecording]);
 
   const handleInputAreaLayout = useCallback((e: LayoutChangeEvent) => {
     inputAreaWidthSV.value = e.nativeEvent.layout.width;
@@ -794,17 +742,15 @@ export default function ChatPanel({
     if (!inputValue.trim()) return;
 
     if (isListening) {
-      await Voice.stop();
-      setIsListening(false);
       micPulse.value = 1;
-      contractOverlay();
+      await stopRecording();
     }
 
     onSendMessage(inputValue.trim());
     setInputValue('');
     historyIndexRef.current = -1;
     savedInputRef.current = '';
-  }, [inputValue, isListening, micPulse, onSendMessage, contractOverlay]);
+  }, [inputValue, isListening, micPulse, onSendMessage, stopRecording]);
 
   const userMessages = messages.filter(m => m.role === 'user').map(m => m.content);
 

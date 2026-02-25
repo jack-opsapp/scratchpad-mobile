@@ -9,7 +9,8 @@ export type AuthStackParamList = {
 // Root stack (wraps everything)
 export type RootStackParamList = {
   Auth: NavigatorScreenParams<AuthStackParamList>;
-  Main: undefined;
+  Main: { voiceMessage?: string } | undefined;
+  VoiceInput: undefined;
 };
 
 // Screen props types

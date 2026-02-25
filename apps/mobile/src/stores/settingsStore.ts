@@ -186,7 +186,7 @@ export const useSettingsStore = create<SettingsState>()(
               custom_openai_model: data.custom_openai_model,
               calendar_sync_enabled: DEFAULT_SETTINGS.calendar_sync_enabled,
               calendar_default_reminder: DEFAULT_SETTINGS.calendar_default_reminder,
-              demo_complete: data.demo_complete ?? DEFAULT_SETTINGS.demo_complete,
+              demo_complete: get().settings.demo_complete,
             };
             set({ settings, loading: false });
           }

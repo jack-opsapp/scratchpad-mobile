@@ -4,3 +4,4 @@ export { default as ChatScreen } from './ChatScreen';
 export { default as SettingsScreen } from './SettingsScreen';
 export { default as PageScreen } from './PageScreen';
 export { default as SectionScreen } from './SectionScreen';
+export { default as VoiceInputScreen } from './VoiceInputScreen';
