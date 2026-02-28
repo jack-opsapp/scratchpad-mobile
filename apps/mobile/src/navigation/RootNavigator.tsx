@@ -42,7 +42,11 @@ export default function RootNavigator() {
     try {
       const pending = await VoiceInputBridge.checkPendingVoiceInput();
       if (pending && navigationRef.isReady()) {
-        navigationRef.navigate('VoiceInput');
+        // Avoid pushing duplicate VoiceInput screen
+        const currentRoute = navigationRef.getCurrentRoute();
+        if (currentRoute?.name !== 'VoiceInput') {
+          navigationRef.navigate('VoiceInput');
+        }
       }
     } catch (_e) {
       // Bridge not available (e.g., older iOS or dev builds)

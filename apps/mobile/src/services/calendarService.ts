@@ -39,33 +39,42 @@ export async function getOrCreateSlateCalendar(): Promise<string> {
   const existing = calendars.find((c) => c.title === SLATE_CALENDAR_TITLE);
   if (existing) return existing.id;
 
-  // Find a local source to attach the calendar to
-  let sourceId: string | undefined;
   if (Platform.OS === 'ios') {
-    const sources = await Calendar.getSourcesAsync();
-    const localSource = sources.find((s) => s.type === Calendar.SourceType.LOCAL)
-      || sources.find((s) => s.type === Calendar.SourceType.CALDAV)
-      || sources[0];
-    sourceId = localSource?.id;
+    const defaultCal = await Calendar.getDefaultCalendarAsync();
+
+    // Try creating a dedicated Slate calendar on the default source
+    try {
+      const newCalendarId = await Calendar.createCalendarAsync({
+        title: SLATE_CALENDAR_TITLE,
+        color: SLATE_CALENDAR_COLOR,
+        entityType: Calendar.EntityTypes.EVENT,
+        sourceId: defaultCal.source.id,
+        source: defaultCal.source,
+      });
+      console.log('[CalendarService] Created Slate calendar:', newCalendarId);
+      return newCalendarId;
+    } catch (e) {
+      // Some accounts (e.g. iCloud) don't allow creating new calendars via API.
+      // Fall back to using the default calendar directly.
+      console.log('[CalendarService] Cannot create calendar, using default:', defaultCal.id, e);
+      return defaultCal.id;
+    }
   }
 
+  // Android
   const newCalendarId = await Calendar.createCalendarAsync({
     title: SLATE_CALENDAR_TITLE,
     color: SLATE_CALENDAR_COLOR,
     entityType: Calendar.EntityTypes.EVENT,
-    ...(sourceId ? { sourceId } : {}),
     source: {
       isLocalAccount: true,
       name: SLATE_CALENDAR_TITLE,
-      type: Platform.OS === 'ios' ? Calendar.SourceType.LOCAL : 'LOCAL',
+      type: 'LOCAL',
     },
-    ...(Platform.OS === 'android' ? {
-      name: SLATE_CALENDAR_TITLE,
-      ownerAccount: 'slate',
-      accessLevel: Calendar.CalendarAccessLevel.OWNER,
-    } : {}),
+    name: SLATE_CALENDAR_TITLE,
+    ownerAccount: 'slate',
+    accessLevel: Calendar.CalendarAccessLevel.OWNER,
   });
-
   console.log('[CalendarService] Created Slate calendar:', newCalendarId);
   return newCalendarId;
 }

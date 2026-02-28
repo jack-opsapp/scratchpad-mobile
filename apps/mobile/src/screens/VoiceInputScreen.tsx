@@ -6,6 +6,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   Linking,
+  StatusBar,
+  KeyboardAvoidingView,
+  Platform,
   NativeSyntheticEvent,
   TextInputSelectionChangeEventData,
 } from 'react-native';
@@ -22,7 +25,7 @@ import { useVoiceInput } from '../hooks/useVoiceInput';
 import { useTheme } from '../contexts/ThemeContext';
 import { colors as staticColors } from '../styles';
 
-// --- Waveform constants (2x ChatPanel) ---
+// Waveform constants — hero display (2x ChatPanel)
 const WAVEFORM_BAR_COUNT = 48;
 const WAVEFORM_BAR_WIDTH = 3;
 const WAVEFORM_BAR_GAP = 2;
@@ -30,10 +33,8 @@ const WAVEFORM_MAX_HEIGHT = 80;
 const WAVEFORM_MIN_HEIGHT = 4;
 const WAVEFORM_MAX_HEIGHT_SMALL = 40;
 
-// --- Screen states ---
 type ScreenState = 'recording' | 'review' | 're-recording';
 
-// --- WaveformBar component ---
 const WaveformBar = React.memo(({
   index,
   waveformTime,
@@ -65,7 +66,6 @@ const WaveformBar = React.memo(({
   return <Animated.View style={animStyle} />;
 });
 
-// --- Main screen component ---
 export default function VoiceInputScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -77,27 +77,37 @@ export default function VoiceInputScreen() {
   const [permissionDenied, setPermissionDenied] = useState(false);
   const textInputRef = useRef<TextInput>(null);
   const autoStartedRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  // Callback for transcript changes: depends on screen state
+  // Use refs for values needed in the transcript callback
+  const screenStateRef = useRef<ScreenState>('recording');
+  screenStateRef.current = screenState;
+  const cursorPositionRef = useRef(0);
+  cursorPositionRef.current = cursorPosition;
+
+  // Track mounted state for async cleanup
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  // Stable transcript change handler — reads from refs, never changes identity
   const onTranscriptChange = useCallback((newTranscript: string) => {
-    if (screenState === 'recording') {
-      // In initial recording, replace text entirely
+    if (screenStateRef.current === 'recording') {
       setText(newTranscript);
-    } else if (screenState === 're-recording') {
-      // In re-recording, insert at saved cursor position
+    } else if (screenStateRef.current === 're-recording') {
+      const pos = cursorPositionRef.current;
       setText((prev) => {
-        const before = prev.slice(0, cursorPosition);
-        const after = prev.slice(cursorPosition);
-        // Add a space before if needed
+        const before = prev.slice(0, pos);
+        const after = prev.slice(pos);
         const needsSpace = before.length > 0 && !before.endsWith(' ') && !newTranscript.startsWith(' ');
         return before + (needsSpace ? ' ' : '') + newTranscript + after;
       });
     }
-  }, [screenState, cursorPosition]);
+  }, []);
 
   const {
     isListening,
-    transcript,
     error,
     volumeLevel,
     waveformTime,
@@ -106,86 +116,61 @@ export default function VoiceInputScreen() {
     resetTranscript,
   } = useVoiceInput({ onTranscriptChange });
 
-  // Auto-start recording on mount with 300ms delay
+  // Auto-start recording on mount
   useEffect(() => {
     if (autoStartedRef.current) return;
     autoStartedRef.current = true;
-    const timer = setTimeout(async () => {
-      try {
-        await startRecording();
-      } catch (_e) {
-        // Check if this is a permission error
-        setPermissionDenied(true);
-      }
+    const timer = setTimeout(() => {
+      if (mountedRef.current) startRecording();
     }, 300);
     return () => clearTimeout(timer);
   }, [startRecording]);
 
-  // Detect permission denied from error string
+  // Detect permission errors
   useEffect(() => {
     if (error && (
       error.toLowerCase().includes('permission') ||
       error.toLowerCase().includes('not authorized') ||
-      error.toLowerCase().includes('denied')
+      error.toLowerCase().includes('denied') ||
+      error.toLowerCase().includes('not available')
     )) {
       setPermissionDenied(true);
     }
   }, [error]);
 
-  // Handle stop button press
   const handleStop = useCallback(async () => {
     await stopRecording();
-    if (screenState === 'recording') {
-      setScreenState('review');
-    } else if (screenState === 're-recording') {
-      setScreenState('review');
-    }
-  }, [stopRecording, screenState]);
+    setScreenState('review');
+  }, [stopRecording]);
 
-  // Handle re-record from review state
   const handleReRecord = useCallback(async () => {
     resetTranscript();
     setScreenState('re-recording');
-    try {
-      await startRecording();
-    } catch (_e) {
-      setPermissionDenied(true);
-    }
+    await startRecording();
   }, [startRecording, resetTranscript]);
 
-  // Handle clear: reset everything, go back to recording
   const handleClear = useCallback(async () => {
-    if (isListening) {
-      await stopRecording();
-    }
+    await stopRecording();
     setText('');
     resetTranscript();
     setScreenState('recording');
-    // Auto-start recording again after a brief delay
-    setTimeout(async () => {
-      try {
-        await startRecording();
-      } catch (_e) {
-        setPermissionDenied(true);
-      }
+    setTimeout(() => {
+      if (mountedRef.current) startRecording();
     }, 300);
-  }, [isListening, stopRecording, resetTranscript, startRecording]);
+  }, [stopRecording, resetTranscript, startRecording]);
 
-  // Handle send: navigate to Main with the voice message
-  const handleSend = useCallback(() => {
-    if (!text.trim()) return;
-    navigation.navigate('Main', { voiceMessage: text.trim() });
-  }, [text, navigation]);
+  const handleSend = useCallback(async () => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    await stopRecording();
+    navigation.navigate('Main', { voiceMessage: trimmed });
+  }, [text, stopRecording, navigation]);
 
-  // Handle close
   const handleClose = useCallback(async () => {
-    if (isListening) {
-      await stopRecording();
-    }
+    await stopRecording();
     navigation.goBack();
-  }, [isListening, stopRecording, navigation]);
+  }, [stopRecording, navigation]);
 
-  // Track cursor position
   const handleSelectionChange = useCallback(
     (e: NativeSyntheticEvent<TextInputSelectionChangeEventData>) => {
       setCursorPosition(e.nativeEvent.selection.start);
@@ -193,11 +178,13 @@ export default function VoiceInputScreen() {
     [],
   );
 
-  // --- Permission denied state ---
+  const hasText = text.trim().length > 0;
+
+  // --- Permission denied ---
   if (permissionDenied) {
     return (
       <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-        {/* Close button */}
+        <StatusBar barStyle="light-content" />
         <View style={styles.topBar}>
           <TouchableOpacity
             style={styles.closeButton}
@@ -207,7 +194,6 @@ export default function VoiceInputScreen() {
             <X size={20} color={staticColors.textMuted} />
           </TouchableOpacity>
         </View>
-
         <View style={styles.permissionContainer}>
           <Text style={styles.permissionTitle}>MICROPHONE ACCESS REQUIRED</Text>
           <Text style={styles.permissionBody}>
@@ -228,6 +214,17 @@ export default function VoiceInputScreen() {
   if (screenState === 'recording') {
     return (
       <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        <StatusBar barStyle="light-content" />
+        <View style={styles.topBar}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={handleClose}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <X size={20} color={staticColors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.recordingContent}>
           <Text style={styles.stateLabel}>LISTENING</Text>
 
@@ -259,8 +256,12 @@ export default function VoiceInputScreen() {
   // --- Review state ---
   if (screenState === 'review') {
     return (
-      <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-        {/* Close button */}
+      <KeyboardAvoidingView
+        style={[styles.container, { paddingTop: insets.top }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
+      >
+        <StatusBar barStyle="light-content" />
         <View style={styles.topBar}>
           <TouchableOpacity
             style={styles.closeButton}
@@ -273,7 +274,6 @@ export default function VoiceInputScreen() {
 
         <Text style={styles.stateLabel}>REVIEW</Text>
 
-        {/* Editable text area */}
         <View style={styles.textContainer}>
           <TextInput
             ref={textInputRef}
@@ -290,8 +290,7 @@ export default function VoiceInputScreen() {
           />
         </View>
 
-        {/* Action bar */}
-        <View style={styles.actionBar}>
+        <View style={[styles.actionBar, { paddingBottom: insets.bottom || 16 }]}>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={handleClear}
@@ -301,7 +300,7 @@ export default function VoiceInputScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionButton, { borderColor: staticColors.border }]}
+            style={styles.actionButton}
             onPress={handleReRecord}
             activeOpacity={0.7}
           >
@@ -309,21 +308,26 @@ export default function VoiceInputScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionButton, { borderColor: colors.primary }]}
+            style={[
+              styles.actionButton,
+              { borderColor: hasText ? colors.primary : staticColors.border },
+              !hasText && { opacity: 0.4 },
+            ]}
             onPress={handleSend}
             activeOpacity={0.7}
+            disabled={!hasText}
           >
-            <Send size={20} color={staticColors.textPrimary} />
+            <Send size={20} color={hasText ? staticColors.textPrimary : staticColors.textMuted} />
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     );
   }
 
   // --- Re-recording state ---
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      {/* Close button */}
+      <StatusBar barStyle="light-content" />
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.closeButton}
@@ -336,7 +340,6 @@ export default function VoiceInputScreen() {
 
       <Text style={styles.stateLabel}>LISTENING</Text>
 
-      {/* Smaller waveform */}
       <View style={styles.waveformContainerSmall}>
         {Array.from({ length: WAVEFORM_BAR_COUNT }, (_, i) => (
           <WaveformBar
@@ -350,7 +353,6 @@ export default function VoiceInputScreen() {
         ))}
       </View>
 
-      {/* Stop button */}
       <View style={styles.reRecordStopContainer}>
         <TouchableOpacity
           style={styles.stopButton}
@@ -361,15 +363,13 @@ export default function VoiceInputScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Non-editable text display */}
       <View style={styles.textContainer}>
         <TextInput
-          style={styles.textInput}
+          style={[styles.textInput, { color: staticColors.textSecondary }]}
           value={text}
           multiline
           scrollEnabled
           editable={false}
-          placeholder="Tap to edit..."
           placeholderTextColor={staticColors.textMuted}
           textAlignVertical="top"
         />
@@ -383,8 +383,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: staticColors.bg,
   },
-
-  // --- Top bar ---
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -397,8 +395,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  // --- State label ---
   stateLabel: {
     fontFamily: 'Manrope-SemiBold',
     fontSize: 11,
@@ -408,15 +404,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
-
-  // --- Recording state ---
   recordingContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  // --- Waveform ---
   waveformContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -431,8 +423,6 @@ const styles = StyleSheet.create({
     height: 80,
     marginTop: 24,
   },
-
-  // --- Stop button ---
   stopButton: {
     width: 64,
     height: 64,
@@ -441,13 +431,11 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 32,
   },
   reRecordStopContainer: {
     alignItems: 'center',
-    marginTop: 24,
   },
-
-  // --- Text area ---
   textContainer: {
     flex: 1,
     marginTop: 16,
@@ -464,16 +452,14 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     textAlignVertical: 'top',
   },
-
-  // --- Action bar ---
   actionBar: {
-    height: 72,
     borderTopWidth: 1,
     borderTopColor: staticColors.border,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
+    paddingTop: 16,
   },
   actionButton: {
     width: 44,
@@ -484,8 +470,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  // --- Permission denied ---
   permissionContainer: {
     flex: 1,
     justifyContent: 'center',

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   useSharedValue,
   withTiming,
@@ -15,7 +15,7 @@ import Voice, {
 const EXPANSION_DURATION = 350;
 
 export interface UseVoiceInputOptions {
-  language?: string; // default: 'en-US'
+  language?: string;
   onTranscriptChange?: (text: string) => void;
 }
 
@@ -38,19 +38,23 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  // Use refs for values needed in Voice callbacks to avoid stale closures
+  const isListeningRef = useRef(false);
+  const onTranscriptChangeRef = useRef(onTranscriptChange);
+  onTranscriptChangeRef.current = onTranscriptChange;
+
   // Animation shared values
   const recordingExpansion = useSharedValue(0);
   const waveformTime = useSharedValue(0);
   const volumeLevel = useSharedValue(0);
 
-  // Waveform time driver: increments on each frame while recording
+  // Waveform time driver
   const waveformFrameCallback = useFrameCallback((frameInfo) => {
     if (recordingExpansion.value > 0.5) {
       waveformTime.value += (frameInfo.timeSincePreviousFrame ?? 16) / 1000;
     }
-  }, false); // starts inactive
+  }, false);
 
-  // Contract recording overlay
   const contractOverlay = useCallback(() => {
     waveformFrameCallback.setActive(false);
     volumeLevel.value = withTiming(0, { duration: 150 });
@@ -60,42 +64,47 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
     });
   }, [recordingExpansion, volumeLevel, waveformFrameCallback]);
 
-  // Voice recognition setup
+  // Voice event listeners — stable deps, uses refs for mutable values
   useEffect(() => {
     Voice.onSpeechResults = (e: SpeechResultsEvent) => {
       if (e.value && e.value.length > 0) {
         const text = e.value[0];
         setTranscript(text);
-        onTranscriptChange?.(text);
+        onTranscriptChangeRef.current?.(text);
       }
     };
 
     Voice.onSpeechVolumeChanged = (e: SpeechVolumeChangeEvent) => {
-      // Smoothly animate to new volume level
       volumeLevel.value = withTiming(Math.max(0, e.value ?? 0), { duration: 100 });
     };
 
-    Voice.onSpeechError = (_e: SpeechErrorEvent) => {
+    Voice.onSpeechError = (e: SpeechErrorEvent) => {
+      isListeningRef.current = false;
       setIsListening(false);
-      setError(_e.error?.message ?? 'Speech recognition error');
+      setError(e.error?.message ?? 'Speech recognition error');
       contractOverlay();
     };
 
     Voice.onSpeechEnd = () => {
+      isListeningRef.current = false;
       setIsListening(false);
       contractOverlay();
     };
 
     return () => {
+      // Stop active recording before destroying
+      if (isListeningRef.current) {
+        Voice.stop().catch(() => {});
+      }
       Voice.destroy().then(Voice.removeAllListeners);
     };
-  }, [volumeLevel, contractOverlay, onTranscriptChange]);
+  }, [volumeLevel, contractOverlay]);
 
   const startRecording = useCallback(async () => {
     try {
       setError(null);
+      isListeningRef.current = true;
       setIsListening(true);
-      // Expand overlay and start waveform
       waveformTime.value = 0;
       recordingExpansion.value = withTiming(1, {
         duration: EXPANSION_DURATION,
@@ -104,6 +113,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
       waveformFrameCallback.setActive(true);
       await Voice.start(language);
     } catch (_e) {
+      isListeningRef.current = false;
       setIsListening(false);
       setError('Failed to start recording');
       contractOverlay();
@@ -111,12 +121,16 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
   }, [language, recordingExpansion, waveformTime, waveformFrameCallback, contractOverlay]);
 
   const stopRecording = useCallback(async () => {
-    if (isListening) {
+    if (!isListeningRef.current) return;
+    try {
       await Voice.stop();
-      setIsListening(false);
-      contractOverlay();
+    } catch (_e) {
+      // Voice.stop can throw if already stopped
     }
-  }, [isListening, contractOverlay]);
+    isListeningRef.current = false;
+    setIsListening(false);
+    contractOverlay();
+  }, [contractOverlay]);
 
   const resetTranscript = useCallback(() => {
     setTranscript('');

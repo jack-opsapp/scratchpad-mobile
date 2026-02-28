@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, FlatList, SectionList, StyleSheet, BackHandler, RefreshControl, Text, Pressable, Vibration, Dimensions, Alert, LayoutAnimation, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRoute, type RouteProp } from '@react-navigation/native';
+import { useRoute, useNavigation, type RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { RootStackParamList } from '../navigation/types';
 import { useSharedValue, runOnJS } from 'react-native-reanimated';
@@ -29,6 +30,7 @@ const EDGE_WIDTH = 20;
 export default function MainScreen() {
   const insets = useSafeAreaInsets();
   const route = useRoute<RouteProp<RootStackParamList, 'Main'>>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { pages, sharedPages, notes: allNotes, userProfiles, customViews, loading, fetchData, refreshData, getNotesForSection, moveNote, updateNote, removeNote, updatePage, acceptSharedPage, declineSharedPage, addCustomView, removeCustomView } = useDataStore();
   const { user } = useAuthStore();
   const { settings } = useSettingsStore();
@@ -416,13 +418,17 @@ export default function MainScreen() {
     chatState.compactHistory();
   }, [chatState, processMessage, processQueue]);
 
-  // Handle voice message from VoiceInputScreen
+  // Handle voice message from VoiceInputScreen — consume and clear param
+  const voiceMessageHandledRef = useRef<string | null>(null);
   useEffect(() => {
     const voiceMessage = route.params?.voiceMessage;
-    if (voiceMessage) {
+    if (voiceMessage && voiceMessage !== voiceMessageHandledRef.current) {
+      voiceMessageHandledRef.current = voiceMessage;
       handleChatMessage(voiceMessage);
+      // Clear the param so it doesn't re-fire on re-render
+      navigation.setParams({ voiceMessage: undefined });
     }
-  }, [route.params?.voiceMessage, handleChatMessage]);
+  }, [route.params?.voiceMessage, handleChatMessage, navigation]);
 
   // Handle user responses to clarifications/confirmations
   const handleUserResponse = useCallback(async (
