@@ -179,10 +179,44 @@ export default function MobileSidebar({
               </TouchableOpacity>
             </View>
 
+            {/* Starred */}
+            {(pages.some(p => p.starred) || pages.some(p => p.sections?.some(s => s.starred))) && (
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>STARRED</Text>
+                {pages.filter(p => p.starred).map(p => (
+                  <TouchableOpacity
+                    key={`starred-page-${p.id}`}
+                    style={[styles.pageItem, currentPageId === p.id && !currentSectionId && styles.pageItemActive]}
+                    onPress={() => handleNavigate(p.id, null)}
+                    activeOpacity={0.7}
+                  >
+                    <Star size={14} color={colors.primary} fill={colors.primary} />
+                    <Text style={styles.pageName} numberOfLines={1}>{p.name.toUpperCase()}</Text>
+                  </TouchableOpacity>
+                ))}
+                {pages.flatMap(p =>
+                  (p.sections || []).filter(s => s.starred).map(s => (
+                    <TouchableOpacity
+                      key={`starred-section-${s.id}`}
+                      style={[styles.pageItem, currentSectionId === s.id && styles.pageItemActive]}
+                      onPress={() => handleNavigate(p.id, s.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Star size={14} color={colors.primary} fill={colors.primary} />
+                      <Text style={[styles.pageName, { opacity: 0.5 }]} numberOfLines={1}>
+                        {p.name.toUpperCase()} /
+                      </Text>
+                      <Text style={styles.pageName} numberOfLines={1}>{s.name.toUpperCase()}</Text>
+                    </TouchableOpacity>
+                  ))
+                )}
+              </View>
+            )}
+
             {/* My Pages */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>MY PAGES</Text>
-              {pages.map((page) => {
+              {[...pages].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0)).map((page) => {
                 const isExpanded = expandedPages.has(page.id);
                 const hasSections = page.sections && page.sections.length > 0;
                 const isCurrentPage = currentPageId === page.id;

@@ -102,6 +102,53 @@ export async function signInWithApple(): Promise<{ success: boolean; error?: str
 }
 
 /**
+ * Sign in with email and password
+ */
+export async function signInWithEmail(email: string, password: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Email sign in error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    };
+  }
+}
+
+/**
+ * Sign up with email and password
+ */
+export async function signUpWithEmail(email: string, password: string): Promise<{ success: boolean; error?: string; needsConfirmation?: boolean }> {
+  try {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    // If no session is returned, email confirmation is required
+    if (!data.session) {
+      return { success: true, needsConfirmation: true };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Email sign up error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    };
+  }
+}
+
+/**
  * Sign out the current user
  */
 export async function signOut(): Promise<void> {

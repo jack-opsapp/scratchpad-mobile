@@ -15,6 +15,7 @@ import { useSettingsStore } from '../stores/settingsStore';
 import { useCalendarStore } from '../stores/calendarStore';
 import DateTimePicker from '../components/DateTimePicker';
 import { useChatState } from '../hooks/useChatState';
+import { useUndoRedo } from '../hooks/useUndoRedo';
 import { apiClient } from '../services/api';
 import { colors as staticColors, theme } from '../styles';
 import { useTheme } from '../contexts/ThemeContext';
@@ -37,6 +38,7 @@ export default function MainScreen() {
   const chatState = useChatState();
   const colors = useTheme();
   const { syncNote, unsyncNote } = useCalendarStore();
+  const { pushUndo, undo, redo, promptUndo, canUndo, canRedo } = useUndoRedo();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -667,6 +669,10 @@ export default function MainScreen() {
             .single();
           if (error) throw new Error(`Failed to create note: ${error.message}`);
 
+          if (createdNote) {
+            pushUndo({ type: 'create_note', noteId: createdNote.id, note: createdNote });
+          }
+
           // Auto-sync to calendar if note has start_time and calendar sync is enabled
           if (createdNote?.start_time && settings.calendar_sync_enabled) {
             try {
@@ -738,7 +744,7 @@ export default function MainScreen() {
     }
 
     return { results, updatedContext };
-  }, [user, pages]);
+  }, [user, pages, pushUndo]);
 
   const handlePlanExecute = useCallback(async (messageIndex: number) => {
     const msg = chatState.messages[messageIndex];
@@ -843,12 +849,16 @@ export default function MainScreen() {
 
     if (target) {
       Vibration.vibrate(30);
+      const note = allNotes.find(n => n.id === draggingNoteId);
+      if (note) {
+        pushUndo({ type: 'move_note', noteId: draggingNoteId, previousSectionId: note.section_id, newSectionId: target.sectionId });
+      }
       await moveNote(draggingNoteId, target.sectionId);
     }
 
     setDraggingNoteId(null);
     setDragPos({ x: 0, y: 0 });
-  }, [draggingNoteId, moveNote]);
+  }, [draggingNoteId, moveNote, allNotes, pushUndo]);
 
   const handleDragCancel = useCallback(() => {
     setDraggingNoteId(null);
@@ -864,6 +874,7 @@ export default function MainScreen() {
     const note = allNotes.find((n) => n.id === noteId);
     if (!note) return;
     const nowCompleted = !note.completed;
+    pushUndo({ type: 'toggle_note', noteId, previousCompleted: note.completed });
     updateNote(noteId, {
       completed: nowCompleted,
       completed_by_user_id: nowCompleted ? user?.id ?? null : null,
@@ -873,15 +884,18 @@ export default function MainScreen() {
     if (nowCompleted && note.calendar_event_id) {
       unsyncNote(note);
     }
-  }, [allNotes, updateNote, user, unsyncNote]);
+  }, [allNotes, updateNote, user, unsyncNote, pushUndo]);
 
   const handleNoteDelete = useCallback((noteId: string) => {
     const note = allNotes.find((n) => n.id === noteId);
+    if (note) {
+      pushUndo({ type: 'delete_note', noteId, note: { ...note } });
+    }
     if (note?.calendar_event_id) {
       unsyncNote(note);
     }
     removeNote(noteId);
-  }, [allNotes, removeNote, unsyncNote]);
+  }, [allNotes, removeNote, unsyncNote, pushUndo]);
 
   // DateTimePicker handlers
   const handleDatePress = useCallback((note: Note) => {
@@ -1033,6 +1047,8 @@ export default function MainScreen() {
           onMenuPress={() => setSidebarOpen(!sidebarOpen)}
           onMorePress={() => currentPageId ? setHeaderMenuOpen(!headerMenuOpen) : undefined}
           onBackPress={handleBackPress}
+          canUndo={canUndo}
+          onUndo={promptUndo}
         />
 
         {/* Shared page accept/decline banner */}

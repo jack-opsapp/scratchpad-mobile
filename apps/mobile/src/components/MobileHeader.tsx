@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MoreVertical, ChevronLeft, X } from 'lucide-react-native';
+import { MoreVertical, ChevronLeft, X, Undo2 } from 'lucide-react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -20,6 +20,8 @@ interface MobileHeaderProps {
   isDrawerOpen?: boolean;
   agentViewTitle?: string | null;
   onCloseAgentView?: () => void;
+  canUndo?: boolean;
+  onUndo?: () => void;
 }
 
 /** Animated hamburger that morphs into an X */
@@ -67,6 +69,8 @@ export default function MobileHeader({
   isDrawerOpen = false,
   agentViewTitle = null,
   onCloseAgentView,
+  canUndo = false,
+  onUndo,
 }: MobileHeaderProps) {
   const insets = useSafeAreaInsets();
 
@@ -113,26 +117,37 @@ export default function MobileHeader({
             )}
           </View>
 
-          {/* Right button */}
-          {agentViewTitle && onCloseAgentView ? (
-            <TouchableOpacity
-              style={styles.button}
-              onPress={onCloseAgentView}
-              activeOpacity={0.7}
-            >
-              <X size={18} color={staticColors.textMuted} />
-            </TouchableOpacity>
-          ) : !agentViewTitle ? (
-            <TouchableOpacity
-              style={styles.button}
-              onPress={onMorePress}
-              activeOpacity={0.7}
-            >
-              <MoreVertical size={20} color={staticColors.textMuted} />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.button} />
-          )}
+          {/* Right buttons */}
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {canUndo && onUndo && (
+              <TouchableOpacity
+                style={styles.button}
+                onPress={onUndo}
+                activeOpacity={0.7}
+              >
+                <Undo2 size={18} color={staticColors.textMuted} />
+              </TouchableOpacity>
+            )}
+            {agentViewTitle && onCloseAgentView ? (
+              <TouchableOpacity
+                style={styles.button}
+                onPress={onCloseAgentView}
+                activeOpacity={0.7}
+              >
+                <X size={18} color={staticColors.textMuted} />
+              </TouchableOpacity>
+            ) : !agentViewTitle ? (
+              <TouchableOpacity
+                style={styles.button}
+                onPress={onMorePress}
+                activeOpacity={0.7}
+              >
+                <MoreVertical size={20} color={staticColors.textMuted} />
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.button} />
+            )}
+          </View>
         </View>
       </View>
     </>

@@ -41,3 +41,6 @@ apps/mobile/android/app/build/
 # Misc
 *.local
 .cache/
+
+# Local Claude Code config
+.claude/

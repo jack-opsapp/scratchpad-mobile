@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User } from '@slate/shared';
 import { supabase } from '../services/supabase';
-import { getCurrentUser, signInWithGoogle, signInWithApple, signOut } from '../services/auth';
+import { getCurrentUser, signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, signOut } from '../services/auth';
 
 interface AuthState {
   user: User | null;
@@ -14,6 +14,8 @@ interface AuthState {
   // Actions
   initialize: () => Promise<void>;
   login: (provider?: 'google' | 'apple') => Promise<boolean>;
+  loginWithEmail: (email: string, password: string) => Promise<boolean>;
+  signUpWithEmail: (email: string, password: string) => Promise<'success' | 'confirmation' | false>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
   setError: (error: string | null) => void;
@@ -68,6 +70,39 @@ export const useAuthStore = create<AuthState>()(
           return true;
         } else {
           set({ loading: false, error: result.error || 'Login failed' });
+          return false;
+        }
+      },
+
+      loginWithEmail: async (email: string, password: string) => {
+        set({ loading: true, error: null });
+
+        const result = await signInWithEmail(email, password);
+
+        if (result.success) {
+          const user = await getCurrentUser();
+          set({ user, loading: false });
+          return true;
+        } else {
+          set({ loading: false, error: result.error || 'Login failed' });
+          return false;
+        }
+      },
+
+      signUpWithEmail: async (email: string, password: string) => {
+        set({ loading: true, error: null });
+
+        const result = await signUpWithEmail(email, password);
+
+        if (result.success && result.needsConfirmation) {
+          set({ loading: false });
+          return 'confirmation';
+        } else if (result.success) {
+          const user = await getCurrentUser();
+          set({ user, loading: false });
+          return 'success';
+        } else {
+          set({ loading: false, error: result.error || 'Sign up failed' });
           return false;
         }
       },

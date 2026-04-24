@@ -9,6 +9,7 @@ import {
   Pressable,
   TextInput,
   Alert,
+  Modal,
   Switch,
   Share,
   ActivityIndicator,
@@ -535,6 +536,9 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
   const [clearingMemory, setClearingMemory] = useState(false);
   const [memoryCleared, setMemoryCleared] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteInput, setDeleteInput] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   // Pending changes state
   const [pendingChanges, setPendingChanges] = useState<Partial<typeof settings>>({});
@@ -749,15 +753,36 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
           text: 'Delete Account',
           style: 'destructive',
           onPress: () => {
-            Alert.alert(
-              'Are you absolutely sure?',
-              'Type DELETE to confirm.',
-              [{ text: 'Cancel', style: 'cancel' }],
-            );
+            setDeleteInput('');
+            setShowDeleteConfirm(true);
           },
         },
       ],
     );
+  };
+
+  const handleConfirmDelete = async () => {
+    if (deleteInput !== 'DELETE') {
+      Alert.alert('Account not deleted', 'You must type DELETE exactly to confirm.');
+      return;
+    }
+
+    setDeletingAccount(true);
+    try {
+      const { error } = await supabase.functions.invoke('delete-account');
+
+      if (error) {
+        Alert.alert('Error', 'Failed to delete account. Please try again.');
+        return;
+      }
+
+      setShowDeleteConfirm(false);
+      await logout();
+    } catch {
+      Alert.alert('Error', 'Failed to delete account. Please try again.');
+    } finally {
+      setDeletingAccount(false);
+    }
   };
 
   const handleClearMemory = async () => {
@@ -2082,6 +2107,54 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
             </TouchableOpacity>
           </ScrollView>
 
+          {/* Delete Confirmation Modal */}
+          <Modal
+            visible={showDeleteConfirm}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowDeleteConfirm(false)}
+          >
+            <Pressable
+              style={styles.deleteModalOverlay}
+              onPress={() => setShowDeleteConfirm(false)}
+            >
+              <View style={styles.deleteModalContent} onStartShouldSetResponder={() => true}>
+                <Text style={styles.deleteModalTitle}>Are you absolutely sure?</Text>
+                <Text style={styles.deleteModalMessage}>Type DELETE to confirm.</Text>
+                <TextInput
+                  style={styles.deleteModalInput}
+                  value={deleteInput}
+                  onChangeText={setDeleteInput}
+                  placeholder="DELETE"
+                  placeholderTextColor={staticColors.textMuted}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  editable={!deletingAccount}
+                />
+                <View style={styles.deleteModalButtons}>
+                  <TouchableOpacity
+                    style={styles.deleteModalCancel}
+                    onPress={() => setShowDeleteConfirm(false)}
+                    disabled={deletingAccount}
+                  >
+                    <Text style={styles.deleteModalCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.deleteModalConfirm, deleteInput !== 'DELETE' && { opacity: 0.4 }]}
+                    onPress={handleConfirmDelete}
+                    disabled={deleteInput !== 'DELETE' || deletingAccount}
+                  >
+                    {deletingAccount ? (
+                      <ActivityIndicator color="#ffffff" size="small" />
+                    ) : (
+                      <Text style={styles.deleteModalConfirmText}>Delete Account</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Pressable>
+          </Modal>
+
           {/* Footer */}
           <View style={[styles.footer, { paddingBottom: 16 + insets.bottom }]}>
             <Text style={styles.footerLogo}>SLATE</Text>
@@ -2573,6 +2646,71 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: staticColors.primary,
     letterSpacing: 1,
+  },
+  deleteModalOverlay: {
+    flex: 1,
+    backgroundColor: staticColors.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  deleteModalContent: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: staticColors.surface,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+  },
+  deleteModalTitle: {
+    fontFamily: theme.fonts.semibold,
+    fontSize: 16,
+    color: staticColors.textPrimary,
+    marginBottom: 8,
+  },
+  deleteModalMessage: {
+    fontFamily: theme.fonts.regular,
+    fontSize: 14,
+    color: staticColors.textSecondary,
+    marginBottom: 16,
+  },
+  deleteModalInput: {
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    backgroundColor: staticColors.bg,
+    color: staticColors.textPrimary,
+    fontFamily: theme.fonts.regular,
+    fontSize: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 20,
+  },
+  deleteModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  deleteModalCancel: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+  },
+  deleteModalCancelText: {
+    fontFamily: theme.fonts.medium,
+    fontSize: 14,
+    color: staticColors.textSecondary,
+  },
+  deleteModalConfirm: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    backgroundColor: staticColors.danger,
+  },
+  deleteModalConfirmText: {
+    fontFamily: theme.fonts.medium,
+    fontSize: 14,
+    color: '#ffffff',
   },
 });
 

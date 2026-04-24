@@ -44,7 +44,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<string>4</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
@@ -54,8 +54,12 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Slate syncs your dated notes to your calendar and detects scheduling conflicts.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Slate syncs your dated notes to your calendar and detects scheduling conflicts.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Slate needs access to your photo library to attach images to notes.</string>
 	<key>NSRemindersFullAccessUsageDescription</key>
 	<string>Slate accesses reminders to help manage your scheduled notes.</string>
 	<key>NSMicrophoneUsageDescription</key>
